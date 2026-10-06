@@ -4,9 +4,11 @@ import { corsHeaders, isAuthorized, isOriginAllowed, parseAllowedOrigins } from 
 import {
   getXiaohongshuStatus,
   loginXiaohongshu,
+  publishXiaohongshuNote,
 } from './adapters/xiaohongshu.mjs'
+import { readXiaohongshuNoteMultipart } from './multipart.mjs'
 
-const VERSION = '0.2.1'
+const VERSION = '0.3.0'
 const host = process.env.BUTTONPOST_RUNNER_HOST || '127.0.0.1'
 const port = Number(process.env.BUTTONPOST_RUNNER_PORT || '27123')
 const token = process.env.BUTTONPOST_RUNNER_TOKEN || randomBytes(24).toString('base64url')
@@ -66,7 +68,7 @@ const server = createServer(async (req, res) => {
         name: 'ButtonPost Local Runner',
         version: VERSION,
         status: 'ready',
-        capabilities: ['xiaohongshu:auth'],
+        capabilities: ['xiaohongshu:auth', 'xiaohongshu:note'],
       },
       cors,
     )
@@ -126,12 +128,33 @@ const server = createServer(async (req, res) => {
     }
   }
 
+  if (
+    req.method === 'POST' &&
+    requestUrl.pathname === '/v1/platforms/xiaohongshu/publish-note'
+  ) {
+    let upload
+    try {
+      upload = await readXiaohongshuNoteMultipart(req)
+      const result = await publishXiaohongshuNote({
+        account: upload.fields.account || 'default',
+        title: upload.fields.title || '',
+        content: upload.fields.content || '',
+        imagePaths: upload.imagePaths,
+      })
+      return sendJson(res, result.ok ? 200 : 409, result, cors)
+    } catch (cause) {
+      return sendJson(res, 500, errorBody(cause), cors)
+    } finally {
+      await upload?.cleanup().catch(() => {})
+    }
+  }
+
   if (req.method === 'POST' && requestUrl.pathname === '/v1/publish') {
     return sendJson(
       res,
       501,
       {
-        error: 'Xiaohongshu auth is available; publishing is the next step.',
+        error: 'Use a platform-specific Local Runner publish endpoint.',
       },
       cors,
     )
@@ -147,7 +170,7 @@ server.listen(port, host, () => {
   console.log('  URL:     http://' + host + ':' + port)
   console.log('  Token:   ' + token)
   console.log('  Allowed origins: ' + [...allowedOrigins].join(', '))
-  console.log('  Capabilities: Xiaohongshu auth')
+  console.log('  Capabilities: Xiaohongshu auth + image-note publishing')
   console.log('')
   console.log('Keep this terminal open while ButtonPost uses local browser publishers.')
   console.log('The token stays on your machine; paste it into ButtonPost only when pairing.')
