@@ -1,6 +1,6 @@
 # Upstream references
 
-ButtonPost is an independent repository whose design is informed by two open-source projects.
+ButtonPost is an independent repository whose design is informed by open-source projects and commercial publishing products.
 
 ## Postiz
 
@@ -15,6 +15,19 @@ ButtonPost is an independent repository whose design is informed by two open-sou
 - Workspace evaluation baseline: `a98e428` on `v2`
 - Repository license: GPL-3.0
 - Useful concepts: browser-authenticated publishing, adapter registry, per-platform preprocessing, image upload, extension/CLI bridge.
+
+## social-auto-upload
+
+- Repository: `dreammis/social-auto-upload`
+- Evaluation baseline: `0012d2c` on `main`
+- License: MIT
+- Useful concepts: Patchright browser automation, QR login, storage-state/cookie validation, local media upload, scheduled publishing, account isolation, unified CLI/Skill contracts.
+- The first ButtonPost Local Runner adapter will use its Xiaohongshu implementation as a reference. If source is copied rather than independently reimplemented, preserve the MIT copyright and permission notice.
+
+## Commercial benchmark
+
+- `yixiaoer.cn` is used as a product benchmark for mature Chinese multi-platform workflows such as account management, batch publishing, scheduling, materials, task status, and team features.
+- Commercial product behavior is not treated as an implementation source.
 
 ## Rule for ButtonPost
 
