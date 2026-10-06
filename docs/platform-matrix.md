@@ -2,8 +2,8 @@
 
 | Platform | Batch | Transport | Source handling | MVP status |
 | --- | --- | --- | --- | --- |
-| X | 1 | Official API | Markdown -> plain text | Implemented |
-| DEV Community | 1 | Official Forem API | Markdown preserved | Implemented |
+| X | 1 | Official API + X Media | Markdown -> plain text; up to 4 source images | Implemented |
+| DEV Community | 1 | Official Forem API + public Blob URLs | Markdown preserved; source images appended; first image as cover | Implemented |
 | 即刻 | 1 | Browser extension | Format compatibility only | Planned |
 | 登链社区 | 1 | Browser / verified integration path | Markdown / editor compatibility | Planned |
 | Indie Hackers | 1 | Browser-assisted | Editor compatibility | Planned |
