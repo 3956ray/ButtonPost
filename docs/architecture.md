@@ -58,3 +58,24 @@ Server publisher credentials stay server-side. The MVP publish endpoint is prote
 Local publishers use a separate runner token. That token is stored in browser local storage and is sent only to the loopback runner. The runner rejects unknown web origins and does not bind to the LAN by default.
 
 Both mechanisms are personal-MVP security boundaries, not the final account/authentication system.
+
+
+## Shared media path
+
+Source images have two transports because the destinations have different trust and API boundaries:
+
+```text
+Source images
+   |
+   +--> browser --> Local Runner --> Xiaohongshu
+   |
+   +--> browser --> public Vercel Blob
+                       |
+                       +--> X server adapter fetches bytes -> X Media upload
+                       |
+                       +--> DEV article references persistent public image URLs
+```
+
+The Blob upload is authorized with a short-lived media ticket minted from the existing ButtonPost publish key. The browser never receives the Blob store's read/write token.
+
+Public Blob objects are intentionally persistent in this MVP because DEV articles continue to reference those URLs after publication.
