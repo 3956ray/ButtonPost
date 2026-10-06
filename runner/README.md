@@ -9,6 +9,8 @@ Phase 2 starts with a deliberately small contract:
 - `GET /v1/platforms/xiaohongshu/status` — validate a locally stored Xiaohongshu login.
 - `POST /v1/platforms/xiaohongshu/login` — open local Chrome and wait for interactive login.
 - `POST /v1/platforms/xiaohongshu/publish-note` — receive title/body/images from ButtonPost Web and publish through the local Chrome profile.
+- `GET /v1/platforms/jike/status` — validate a locally stored Jike login.
+- `POST /v1/platforms/jike/login` — open Jike Web in local Chrome and wait for interactive login.
 - `POST /v1/publish` — reserved for future generic local routing.
 
 ## Start
@@ -97,3 +99,23 @@ Current MVP behavior:
 - success/failure is returned as a separate platform result.
 
 Tags, scheduling, cover selection, video, and final-note URL lookup come later.
+
+
+## Jike authentication
+
+Jike uses the same local-session pattern as Xiaohongshu, with an independent Chrome profile:
+
+```text
+~/.buttonpost/profiles/jike/<account-name>
+```
+
+In ButtonPost Web:
+
+1. connect Local Runner v0.4.0 or later;
+2. choose a local account name;
+3. click **Connect Jike**;
+4. complete login in the Chrome window at `https://web.okjike.com/`;
+5. ButtonPost closes the login window only after a positive logged-in UI marker is detected;
+6. use **Check login** to validate the saved session later.
+
+This step does not publish anything. Jike post composition/publishing is the next increment.

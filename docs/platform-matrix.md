@@ -4,7 +4,7 @@
 | --- | --- | --- | --- | --- |
 | X | 1 | Official API + X Media | Markdown -> plain text; up to 4 source images | Implemented |
 | DEV Community | 1 | Official Forem API + public Blob URLs | Markdown preserved; source images appended; first image as cover | Implemented |
-| 即刻 | 1 | Browser extension | Format compatibility only | Planned |
+| 即刻 | 1 | Local Runner + Patchright | Plain-text source; local session | Auth implemented; publish next |
 | 登链社区 | 1 | Browser / verified integration path | Markdown / editor compatibility | Planned |
 | Indie Hackers | 1 | Browser-assisted | Editor compatibility | Planned |
 | Bonjorr | 1 | Unconfirmed | TBD after exact platform is confirmed | Blocked on platform identity |
