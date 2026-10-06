@@ -12,8 +12,10 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/*.test.ts",
-    "check": "npm run typecheck && npm run test && npm run build"
+    "test": "node --experimental-strip-types --test tests/*.test.ts && npm run runner:test",
+    "check": "npm run typecheck && npm run test && npm run build",
+    "runner": "node runner/server.mjs",
+    "runner:test": "node --test runner/lib.test.mjs"
   },
   "dependencies": {
     "next": "16.3.8",

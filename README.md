@@ -15,7 +15,7 @@ The first runnable slice supports:
 - Parallel publishing with per-platform published / draft / failed / skipped results.
 - A server-side publish key so a deployed personal instance is not an open publishing endpoint.
 
-Next targets: 即刻, 登链社区, Indie Hackers through a local browser-extension runtime.
+Phase 2 adds a **Local Runner** so browser-automated platforms can execute on the user's own computer without sending browser cookies to Vercel. Xiaohongshu is the first planned local adapter.
 
 ## Local setup
 
@@ -25,6 +25,9 @@ Requires Node.js 22+.
 cp .env.example .env.local
 npm install
 npm run dev
+
+# In another terminal, for local/browser publishers:
+npm run runner
 ```
 
 Open `http://localhost:3000`.
@@ -72,7 +75,7 @@ npm test
 npm run build
 ```
 
-The repository intentionally starts small. Persistence, media upload, account OAuth, scheduling, and the browser publisher are added only after the base publish pipeline is verified.
+The X + DEV API pipeline is verified. Phase 2 now builds the Local Runner bridge first, then adds browser publishers beginning with Xiaohongshu. See [`docs/local-runner.md`](docs/local-runner.md).
 
 ## Open-source references
 

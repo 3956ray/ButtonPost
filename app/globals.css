@@ -112,3 +112,84 @@ button, input, textarea { font: inherit; }
   .textarea { min-height: 290px; }
   .result { grid-template-columns: 78px 82px 1fr; }
 }
+
+.runner-card {
+  margin-top: 18px;
+  padding: 22px 24px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 18px 50px rgba(24, 23, 18, .04);
+}
+.runner-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-start;
+}
+.runner-heading h2 { margin: 3px 0 6px; font-size: 18px; }
+.runner-heading p { margin: 0; max-width: 610px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+.eyebrow { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.runner-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+}
+.runner-state-dot { width: 7px; height: 7px; border-radius: 999px; background: var(--warning); }
+.runner-state.connected { color: var(--success); }
+.runner-state.connected .runner-state-dot { background: var(--success); }
+.runner-state.error { color: var(--danger); }
+.runner-state.error .runner-state-dot { background: var(--danger); }
+.runner-fields {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 18px;
+}
+.runner-fields label { display: grid; gap: 6px; color: var(--muted); font-size: 11px; font-weight: 700; }
+.runner-fields input {
+  width: 100%;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+  color: var(--text);
+  outline: none;
+}
+.runner-fields input:focus { border-color: #7b7970; box-shadow: 0 0 0 3px rgba(23,23,19,.06); }
+.runner-actions { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-top: 12px; }
+.runner-actions button {
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--accent);
+  color: white;
+  font-weight: 750;
+  cursor: pointer;
+}
+.runner-actions button:disabled { opacity: .5; cursor: wait; }
+.runner-actions .secondary-button { background: var(--surface-2); color: var(--text); }
+.runner-actions code {
+  margin-left: auto;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 11px;
+}
+.runner-message { margin: 12px 0 0; font-size: 12px; font-weight: 650; }
+.runner-message.error { color: var(--danger); }
+.runner-privacy { margin: 6px 0 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+
+@media (max-width: 760px) {
+  .runner-heading { display: grid; }
+  .runner-fields { grid-template-columns: 1fr; }
+  .runner-actions code { margin-left: 0; }
+}

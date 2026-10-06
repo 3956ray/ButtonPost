@@ -7,27 +7,27 @@ ButtonPost keeps one source post and sends it through platform adapters. Adapter
 ## Core flow
 
 ```text
-Source Post
-  title + Markdown + media
-          |
-          v
-Platform registry
-          |
-    +-----+-----+
-    |           |
- API adapter   Browser adapter
-    |           |
- X / DEV      Jike / LearnBlockchain / others
-    |           |
-    +-----+-----+
-          |
-          v
-Per-platform publication result
+                         Source Post
+                       title + Markdown
+                              |
+                 +------------+------------+
+                 |                         |
+                 v                         v
+          Server publishers          Local publishers
+             Vercel                   user's computer
+                 |                         |
+            X / DEV / ...            Local Runner
+                                           |
+                              +------------+------------+
+                              |            |            |
+                         Patchright     Extension      CLI
+                              |            |            |
+                         Xiaohongshu     Jike/...    Bilibili/...
+                              |
+                 per-platform publication result
 ```
 
 ## Source model
-
-The MVP deliberately keeps the model small:
 
 ```ts
 type SourcePost = {
@@ -36,18 +36,25 @@ type SourcePost = {
 }
 ```
 
-Media and persistence are the next additions. Platform-specific content variants are explicitly out of scope for the core model.
+Media and persistence are the next additions. Platform-specific content variants remain out of scope for the core model.
 
 ## Adapter contract
 
-Every publisher exposes configuration status, validation, and publhing. Formatting is internal to the adapter. A failure on one destination must not prevent other destinations from publishing.
+Every publisher exposes configuration status, validation, and publishing. Formatting is internal to the adapter. A failure on one destination must not prevent other destinations from publishing.
 
-## API vs browser publishers
+## Server vs local publishers
 
-- API publishers are preferred whenever a stable official API exists.
-- Browser publishers will run through a local Chrome extension and the user's own authenticated browser session.
-- Browser support is planned after the X + DEV API path proves the end-to-end workflow.
+- Server publishers are preferred whenever a stable official API exists.
+- Local publishers are used when a destination needs browser automation, QR login, local media, or a user's browser session.
+- The Local Runner binds to `127.0.0.1` and is called by the ButtonPost page from the user's browser.
+- Local platform cookies do not need to be uploaded to Vercel.
+
+See [`local-runner.md`](local-runner.md).
 
 ## Security baseline
 
-Publisher credentials stay server-side. The MVP publish endpoint is protected by `BUTTONPOST_SECRET`; production refuses publishing if that variable is missing. This is temporary protection for a personal MVP, not the final authentication system.
+Server publisher credentials stay server-side. The MVP publish endpoint is protected by `BUTTONPOST_SECRET`.
+
+Local publishers use a separate runner token. That token is stored in browser local storage and is sent only to the loopback runner. The runner rejects unknown web origins and does not bind to the LAN by default.
+
+Both mechanisms are personal-MVP security boundaries, not the final account/authentication system.
