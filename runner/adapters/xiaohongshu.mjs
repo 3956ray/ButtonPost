@@ -4,7 +4,9 @@ import path from 'node:path'
 import { chromium } from 'patchright'
 
 const CREATOR_BASE_URL = 'https://creator.xiaohongshu.com'
-const LOGIN_URL = CREATOR_BASE_URL + '/login'
+const LOGIN_URL =
+  CREATOR_BASE_URL +
+  '/login?source=&redirectReason=401&lastUrl=%252Fnew%252Fnote-manager%253FroleType%253Dcreator'
 const PUBLISH_CHECK_URL =
   CREATOR_BASE_URL + '/publish/publish?from=homepage&target=image'
 
@@ -54,8 +56,17 @@ async function loginBoxVisible(page) {
   }
 }
 
+export function isXiaohongshuLoginUrl(value) {
+  try {
+    const url = new URL(value)
+    return url.origin === CREATOR_BASE_URL && url.pathname === '/login'
+  } catch {
+    return false
+  }
+}
+
 async function pageLooksAuthenticated(page) {
-  if (page.url().startsWith(LOGIN_URL)) return false
+  if (isXiaohongshuLoginUrl(page.url())) return false
   return !(await loginBoxVisible(page))
 }
 
