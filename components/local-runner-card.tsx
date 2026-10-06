@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { JikeRunnerCard } from '@/components/jike-runner-card'
 
 const DEFAULT_RUNNER_URL = 'http://127.0.0.1:27123'
 const STORAGE_URL = 'buttonpost.runner.url'
@@ -355,6 +356,12 @@ export function LocalRunnerCard() {
           Login runs in a local Chrome profile under <code>~/.buttonpost</code>. Nothing is published during this step.
         </p>
       </div>
+
+      <JikeRunnerCard
+        runnerUrl={runnerUrl}
+        runnerToken={runnerToken}
+        runnerConnected={state === 'connected'}
+      />
     </section>
   )
 }
