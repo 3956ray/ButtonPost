@@ -65,9 +65,47 @@ export function isXiaohongshuLoginUrl(value) {
   }
 }
 
+const AUTHENTICATED_CREATOR_MARKERS = [
+  '#publish-container',
+  'input[type="file"][accept*="image"]',
+  'div[class^="upload-content"] input[class="upload-input"]',
+]
+
+async function hasAuthenticatedCreatorMarker(page) {
+  for (const selector of AUTHENTICATED_CREATOR_MARKERS) {
+    try {
+      const locator = page.locator(selector).first()
+      if ((await locator.count()) > 0) return true
+    } catch {
+      // Keep checking other markers while the creator page is still rendering.
+    }
+  }
+  return false
+}
+
 async function pageLooksAuthenticated(page) {
   if (isXiaohongshuLoginUrl(page.url())) return false
-  return !(await loginBoxVisible(page))
+  if (await loginBoxVisible(page)) return false
+
+  try {
+    const url = new URL(page.url())
+    return url.origin === CREATOR_BASE_URL && url.pathname !== '/login'
+  } catch {
+    return false
+  }
+}
+
+async function waitForAuthenticatedCreatorPage(page, timeoutMs = 20_000) {
+  const deadline = Date.now() + timeoutMs
+
+  while (Date.now() < deadline) {
+    if (isXiaohongshuLoginUrl(page.url())) return false
+    if (await loginBoxVisible(page)) return false
+    if (await hasAuthenticatedCreatorMarker(page)) return true
+    await page.waitForTimeout(500)
+  }
+
+  return false
 }
 
 async function verifyAuthenticated(page) {
@@ -75,8 +113,11 @@ async function verifyAuthenticated(page) {
     waitUntil: 'domcontentloaded',
     timeout: 30_000,
   })
-  await page.waitForTimeout(1_500)
-  return pageLooksAuthenticated(page)
+
+  // Authentication must be positively proven by the creator publish page.
+  // Merely not seeing the login UI is not enough because redirects/rendering
+  // can lag behind navigation and previously caused false "Connected" states.
+  return waitForAuthenticatedCreatorPage(page)
 }
 
 function chromeLaunchError(cause) {
