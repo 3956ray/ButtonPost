@@ -282,3 +282,119 @@ export async function loginXiaohongshu(
     }
   })
 }
+
+
+function xiaohongshuHeadless() {
+  return process.env.BUTTONPOST_XHS_HEADLESS === 'true'
+}
+
+export async function publishXiaohongshuNote({
+  account = 'default',
+  title,
+  content,
+  imagePaths,
+}) {
+  const accountName = normalizeAccountName(account)
+  const userDataDir = xiaohongshuProfileDir(accountName)
+  const normalizedTitle = String(title || '').trim()
+  const normalizedContent = String(content || '').trim()
+  const normalizedImages = Array.isArray(imagePaths) ? imagePaths.filter(Boolean) : []
+
+  if (!normalizedTitle) {
+    return {
+      ok: false,
+      platform: 'xiaohongshu',
+      status: 'failed',
+      message: 'Xiaohongshu requires a title.',
+    }
+  }
+
+  if (!normalizedContent) {
+    return {
+      ok: false,
+      platform: 'xiaohongshu',
+      status: 'failed',
+      message: 'Xiaohongshu requires post content.',
+    }
+  }
+
+  if (!normalizedImages.length) {
+    return {
+      ok: false,
+      platform: 'xiaohongshu',
+      status: 'failed',
+      message: 'Xiaohongshu image-note publishing requires at least one image.',
+    }
+  }
+
+  if (!(await profileExists(userDataDir))) {
+    return {
+      ok: false,
+      platform: 'xiaohongshu',
+      status: 'auth_required',
+      message: 'Connect Xiaohongshu before publishing.',
+    }
+  }
+
+  return withOperation('xiaohongshu note publishing', async () => {
+    let context
+    try {
+      const headless = xiaohongshuHeadless()
+      context = await chromium.launchPersistentContext(userDataDir, {
+        channel: 'chrome',
+        headless,
+        viewport: headless ? { width: 1280, height: 900 } : null,
+      })
+
+      const page = context.pages()[0] || (await context.newPage())
+      const authenticated = await verifyAuthenticated(page)
+
+      if (!authenticated) {
+        return {
+          ok: false,
+          platform: 'xiaohongshu',
+          status: 'auth_required',
+          message: 'Xiaohongshu login is missing or expired. Reconnect the account and retry.',
+        }
+      }
+
+      let uploadInput = page.locator('input[type="file"][accept*="image"]').first()
+      if ((await uploadInput.count()) === 0) {
+        uploadInput = page.locator('div[class^="upload-content"] input[class="upload-input"]').first()
+      }
+
+      await uploadInput.waitFor({ state: 'attached', timeout: 30_000 })
+      await uploadInput.setInputFiles(normalizedImages)
+
+      const titleInput = page.locator('input[placeholder*="填写标题"]').first()
+      await titleInput.waitFor({ state: 'visible', timeout: 90_000 })
+      await titleInput.fill(normalizedTitle.slice(0, 20))
+
+      const description = page.locator('p[data-placeholder*="输入正文描述"]').first()
+      await description.waitFor({ state: 'visible', timeout: 30_000 })
+      await description.fill(normalizedContent)
+
+      const publishButton = page.locator('button:has-text("发布")').first()
+      await publishButton.waitFor({ state: 'visible', timeout: 30_000 })
+
+      await Promise.all([
+        page.waitForURL(
+          (url) => url.origin === CREATOR_BASE_URL && url.pathname.includes('/publish/success'),
+          { timeout: 60_000 },
+        ),
+        publishButton.click(),
+      ])
+
+      return {
+        ok: true,
+        platform: 'xiaohongshu',
+        status: 'published',
+        message: 'Xiaohongshu image note published successfully.',
+      }
+    } catch (cause) {
+      throw chromeLaunchError(cause)
+    } finally {
+      await context?.close().catch(() => {})
+    }
+  })
+}
