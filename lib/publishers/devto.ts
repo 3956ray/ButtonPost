@@ -45,6 +45,8 @@ export const devtoPublisher: PublisherAdapter = {
     const validation = validateForDevto(post)
     if (!validation.ok) return { platform: 'devto', status: 'failed', error: validation.error }
 
+    const draftOnly = process.env.DEVTO_DRAFT_ONLY === 'true'
+
     const response = await fetch('https://dev.to/api/articles', {
       method: 'POST',
       headers: {
@@ -56,7 +58,7 @@ export const devtoPublisher: PublisherAdapter = {
         article: {
           title: post.title.trim(),
           body_markdown: post.content,
-          published: process.env.DEVTO_DRAFT_ONLY !== 'true',
+          published: !draftOnly,
           ...(tags() ? { tags: tags() } : {}),
         },
       }),
@@ -74,7 +76,7 @@ export const devtoPublisher: PublisherAdapter = {
 
     return {
       platform: 'devto',
-      status: 'published',
+      status: draftOnly ? 'draft' : 'published',
       externalId: String(body.id),
       externalUrl: body.url,
     }
