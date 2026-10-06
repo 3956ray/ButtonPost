@@ -1,13 +1,12 @@
 import { TwitterApi } from 'twitter-api-v2'
 import { markdownToPlainText } from '@/lib/content/markdown-to-plain'
-import type { PublishResult, PublisherAdapter, SourcePost, ValidationResult } from './types'
-
-type XCreatePostResponse = {
-  data?: { id?: string; text?: string }
-  detail?: string
-  title?: string
-  errors?: Array<{ detail?: string; message?: string }>
-}
+import type {
+  PublishResult,
+  PublisherAdapter,
+  SourceMedia,
+  SourcePost,
+  ValidationResult,
+} from './types'
 
 function xMaxLength(): number {
   const configured = Number(process.env.X_MAX_LENGTH ?? '280')
@@ -39,21 +38,28 @@ function hasOAuth1UserContext(): boolean {
   )
 }
 
+function createXClient(): TwitterApi | null {
+  if (hasOAuth1UserContext()) {
+    return new TwitterApi({
+      appKey: process.env.X_API_KEY!,
+      appSecret: process.env.X_API_SECRET!,
+      accessToken: process.env.X_ACCESS_TOKEN!,
+      accessSecret: process.env.X_ACCESS_TOKEN_SECRET!,
+    })
+  }
+
+  if (process.env.X_USER_ACCESS_TOKEN) {
+    return new TwitterApi(process.env.X_USER_ACCESS_TOKEN)
+  }
+
+  return null
+}
+
 function appOnlyHint(message: string): string {
   if (message.includes('Application-Only') || message.includes('application-only')) {
     return 'X rejected an application-only Bearer Token. Configure OAuth 1.0a user-context credentials (X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET) or provide an OAuth 2.0 user access token.'
   }
   return message
-}
-
-function errorMessage(body: XCreatePostResponse, status: number): string {
-  const message =
-    body.detail ||
-    body.errors?.[0]?.detail ||
-    body.errors?.[0]?.message ||
-    body.title ||
-    `X API returned HTTP ${status}.`
-  return appOnlyHint(message)
 }
 
 function unknownError(cause: unknown): string {
@@ -76,18 +82,71 @@ function unknownError(cause: unknown): string {
   return 'Unexpected X API error.'
 }
 
-async function publishWithOAuth1(post: SourcePost): Promise<PublishResult> {
-  try {
-    const client = new TwitterApi({
-      appKey: process.env.X_API_KEY!,
-      appSecret: process.env.X_API_SECRET!,
-      accessToken: process.env.X_ACCESS_TOKEN!,
-      accessSecret: process.env.X_ACCESS_TOKEN_SECRET!,
-    })
+async function downloadImage(media: SourceMedia): Promise<{
+  buffer: Buffer
+  contentType: string
+}> {
+  const response = await fetch(media.url, { cache: 'no-store' })
+  if (!response.ok) {
+    throw new Error(`Could not read source image for X: HTTP ${response.status}.`)
+  }
 
-    const result = await client.v2.tweet(formatForX(post))
+  const contentType =
+    response.headers.get('content-type')?.split(';')[0]?.trim() ||
+    media.contentType ||
+    ''
+
+  if (!contentType.startsWith('image/')) {
+    throw new Error(`X media must be an image; received ${contentType || 'unknown content type'}.`)
+  }
+
+  return {
+    buffer: Buffer.from(await response.arrayBuffer()),
+    contentType,
+  }
+}
+
+async function uploadImages(client: TwitterApi, post: SourcePost): Promise<string[]> {
+  const images = (post.media ?? []).slice(0, 4)
+  const mediaIds: string[] = []
+
+  for (const media of images) {
+    const { buffer, contentType } = await downloadImage(media)
+    const mediaId = await client.v2.uploadMedia(buffer, {
+      media_type: contentType as never,
+      media_category: 'tweet_image' as never,
+    })
+    mediaIds.push(mediaId)
+  }
+
+  return mediaIds
+}
+
+async function publishWithClient(
+  client: TwitterApi,
+  post: SourcePost,
+): Promise<PublishResult> {
+  try {
+    const mediaIds = await uploadImages(client, post)
+    const payload: {
+      text: string
+      media?: { media_ids: string[] }
+    } = { text: formatForX(post) }
+
+    if (mediaIds.length) {
+      payload.media = { media_ids: mediaIds }
+    }
+
+    const result = await client.v2.tweet(payload as never)
     const id = result.data?.id
-    if (!id) return { platform: 'x', status: 'failed', error: 'X API did not return a post id.' }
+
+    if (!id) {
+      return {
+        platform: 'x',
+        status: 'failed',
+        error: 'X API did not return a post id.',
+      }
+    }
 
     return {
       platform: 'x',
@@ -100,30 +159,6 @@ async function publishWithOAuth1(post: SourcePost): Promise<PublishResult> {
   }
 }
 
-async function publishWithOAuth2UserToken(post: SourcePost, accessToken: string): Promise<PublishResult> {
-  const response = await fetch('https://api.x.com/2/tweets', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ text: formatForX(post) }),
-    cache: 'no-store',
-  })
-
-  const body = (await response.json().catch(() => ({}))) as XCreatePostResponse
-  if (!response.ok || !body.data?.id) {
-    return { platform: 'x', status: 'failed', error: errorMessage(body, response.status) }
-  }
-
-  return {
-    platform: 'x',
-    status: 'published',
-    externalId: body.data.id,
-    externalUrl: `https://x.com/i/web/status/${body.data.id}`,
-  }
-}
-
 export const xPublisher: PublisherAdapter = {
   id: 'x',
   name: 'X',
@@ -131,7 +166,7 @@ export const xPublisher: PublisherAdapter = {
   requiredEnv: ['X user-context auth'],
 
   configured() {
-    return hasOAuth1UserContext() || Boolean(process.env.X_USER_ACCESS_TOKEN)
+    return Boolean(createXClient())
   },
 
   validate: validateForX,
@@ -140,16 +175,16 @@ export const xPublisher: PublisherAdapter = {
     const validation = validateForX(post)
     if (!validation.ok) return { platform: 'x', status: 'failed', error: validation.error }
 
-    if (hasOAuth1UserContext()) return publishWithOAuth1(post)
-
-    const accessToken = process.env.X_USER_ACCESS_TOKEN
-    if (accessToken) return publishWithOAuth2UserToken(post, accessToken)
-
-    return {
-      platform: 'x',
-      status: 'skipped',
-      error:
-        'X user-context auth is not configured. Set OAuth 1.0a credentials or X_USER_ACCESS_TOKEN.',
+    const client = createXClient()
+    if (!client) {
+      return {
+        platform: 'x',
+        status: 'skipped',
+        error:
+          'X user-context auth is not configured. Set OAuth 1.0a credentials or X_USER_ACCESS_TOKEN.',
+      }
     }
+
+    return publishWithClient(client, post)
   },
 }
