@@ -47,6 +47,9 @@ X_MAX_LENGTH=280
 DEVTO_API_KEY=...
 DEVTO_TAGS=ai,webdev
 DEVTO_DRAFT_ONLY=false
+# Vercel Blob: preferred OIDC setup
+BLOB_STORE_ID=store_...
+# Alternative legacy credential:
 BLOB_READ_WRITE_TOKEN=...
 ```
 
@@ -61,9 +64,11 @@ Local source images are uploaded directly from the browser to a **public Vercel 
 - X fetches the Blob images server-side, uploads up to the first 4 to X Media, then attaches their media IDs to the post.
 - DEV uses the first image as `main_image`; any remaining images are appended to the article Markdown.
 - Blob URLs must remain public because DEV articles reference them after publication.
-- The browser never exposes `BLOB_READ_WRITE_TOKEN`. ButtonPost exchanges the Publish key for a short-lived media-only upload ticket first.
+- ButtonPost supports Vercel Blob **OIDC** (`VERCEL_OIDC_TOKEN + BLOB_STORE_ID`) and the legacy `BLOB_READ_WRITE_TOKEN`.
+- On Vercel, OIDC is preferred: the rotating OIDC token is supplied by Vercel at runtime, while the connected Blob Store contributes `BLOB_STORE_ID`.
+- The browser receives neither the OIDC token nor the Blob read/write token. ButtonPost exchanges the Publish key for a short-lived media-only ticket, then issues a constrained presigned upload.
 
-Connect a public Blob store to the ButtonPost Vercel project so Vercel provides `BLOB_READ_WRITE_TOKEN`. Text-only X / DEV publishing continues to work without Blob storage.
+Connect a **public** Blob store to the ButtonPost Vercel project. A correctly linked OIDC store should make `BLOB_STORE_ID` available to the project. Text-only X / DEV publishing continues to work without Blob storage.
 
 ## Architecture
 
