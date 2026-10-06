@@ -21,6 +21,7 @@ function isSourceMedia(value: unknown): value is { url: string; name?: string; c
   try {
     const url = new URL(media.url)
     if (url.protocol !== 'https:') return false
+    if (!url.hostname.endsWith('.blob.vercel-storage.com')) return false
   } catch {
     return false
   }
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
         : null
 
   if (media === null) {
-    return Response.json({ error: 'Media must be an array of up to 9 HTTPS image URLs.' }, { status: 400 })
+    return Response.json({ error: 'Media must be an array of up to 9 ButtonPost Vercel Blob image URLs.' }, { status: 400 })
   }
 
   const results = await publishEverywhere(
