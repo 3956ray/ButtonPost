@@ -59,7 +59,7 @@ For safe DEV testing, set `DEVTO_DRAFT_ONLY=true` before clicking Publish Everyw
 Local source images are uploaded directly from the browser to a **public Vercel Blob store** before server publishers run. This avoids pushing large image bodies through the ButtonPost server function.
 
 - X fetches the Blob images server-side, uploads up to the first 4 to X Media, then attaches their media IDs to the post.
-- DEV uses the first image as `main_image` and appends all selected images to the article Markdown.
+- DEV uses the first image as `main_image`; any remaining images are appended to the article Markdown.
 - Blob URLs must remain public because DEV articles reference them after publication.
 - The browser never exposes `BLOB_READ_WRITE_TOKEN`. ButtonPost exchanges the Publish key for a short-lived media-only upload ticket first.
 
