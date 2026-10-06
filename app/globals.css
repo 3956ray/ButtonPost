@@ -96,6 +96,7 @@ button, input, textarea { font: inherit; }
 }
 .status { font-weight: 750; }
 .status.published { color: var(--success); }
+.status.draft { color: var(--warning); }
 .status.failed { color: var(--danger); }
 .status.skipped { color: var(--warning); }
 .result-detail { color: var(--muted); overflow-wrap: anywhere; }
