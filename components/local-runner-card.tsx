@@ -43,14 +43,14 @@ async function localRequest(
   init: RequestInit = {},
 ) {
   const url = runnerUrl.trim().replace(/\/$/, '')
+  const headers = new Headers(init.headers)
+  headers.set('Authorization', 'Bearer ' + runnerToken.trim())
+
   return fetch(
     url + pathname,
     loopbackInit({
       ...init,
-      headers: {
-        Authorization: 'Bearer ' + runnerToken.trim(),
-        ...(init.headers || {}),
-      },
+      headers,
       cache: 'no-store',
     }),
   )
