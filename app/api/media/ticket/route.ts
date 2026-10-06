@@ -19,11 +19,11 @@ export async function POST(request: Request) {
   const auth = authorizePublish(body.secret)
   if (!auth.ok) return Response.json({ error: auth.error }, { status: auth.status })
 
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+  if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BLOB_STORE_ID) {
     return Response.json(
       {
         error:
-          'Server media storage is not configured. Connect a public Vercel Blob store to ButtonPost first.',
+          'Server media storage is not configured. Connect a public Vercel Blob store to ButtonPost so BLOB_STORE_ID (OIDC) or BLOB_READ_WRITE_TOKEN is available.',
       },
       { status: 503 },
     )
