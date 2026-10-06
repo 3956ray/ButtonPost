@@ -1,10 +1,10 @@
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client'
-import { authorizePublish } from '@/lib/security/publish-secret'
+import { verifyMediaUploadTicket } from '@/lib/security/media-ticket'
 
 export const runtime = 'nodejs'
 
 type ClientPayload = {
-  secret?: unknown
+  ticket?: unknown
 }
 
 export async function POST(request: Request) {
@@ -39,8 +39,9 @@ export async function POST(request: Request) {
           }
         }
 
-        const auth = authorizePublish(payload.secret)
-        if (!auth.ok) throw new Error(auth.error)
+        if (!verifyMediaUploadTicket(payload.ticket)) {
+          throw new Error('Media upload ticket is invalid or expired.')
+        }
 
         return {
           allowedContentTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
         }
       },
       onUploadCompleted: async () => {
-        // Blob URLs are persisted because DEV articles reference them directly.
+        // Blob URLs remain public because DEV articles reference them directly.
       },
     })
 
