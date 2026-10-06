@@ -10,7 +10,7 @@
 | Bonjorr | 1 | Unconfirmed | TBD after exact platform is confirmed | Blocked on platform identity |
 | 微信公众号 | 2 | Browser adapter | HTML-compatible article | Planned |
 | Substack | 2 | API/browser research | Long-form source | Planned |
-| 小红书 | 2 | Browser adapter | Text + image constraints | Planned |
+| 小红书 | 2 | Local Runner + Patchright | Markdown -> plain text + local image upload | Implemented (image note MVP) |
 | Farcaster | 2 | API | Short post | Planned |
 | Hugging Face Community | 2 | Research | Technical article | Planned |
 | V2EX | 2 | Browser adapter | Topic/editor compatibility | Planned |
