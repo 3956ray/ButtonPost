@@ -3,9 +3,16 @@ export const PLATFORM_IDS = ['x', 'devto'] as const
 export type PlatformId = (typeof PLATFORM_IDS)[number]
 export type PublishStatus = 'published' | 'draft' | 'failed' | 'skipped'
 
+export type SourceMedia = {
+  url: string
+  name?: string
+  contentType?: string
+}
+
 export type SourcePost = {
   title: string
   content: string
+  media?: SourceMedia[]
 }
 
 export type ValidationResult =
