@@ -57,7 +57,22 @@ function errorMessage(body: XCreatePostResponse, status: number): string {
 }
 
 function unknownError(cause: unknown): string {
-  if (cause instanceof Error) return appOnlyHint(cause.message)
+  if (
+    typeof cause === 'object' &&
+    cause !== null &&
+    'code' in cause &&
+    Number((cause as { code?: unknown }).code) === 402
+  ) {
+    return 'X API returned 402 Payment Required. Your X Developer account likely has no available credits; add credits in the X Developer Console and retry.'
+  }
+
+  if (cause instanceof Error) {
+    if (/code\s*402/i.test(cause.message)) {
+      return 'X API returned 402 Payment Required. Your X Developer account likely has no available credits; add credits in the X Developer Console and retry.'
+    }
+    return appOnlyHint(cause.message)
+  }
+
   return 'Unexpected X API error.'
 }
 
