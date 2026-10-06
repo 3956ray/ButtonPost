@@ -41,19 +41,30 @@ No token required. Used only for local discovery.
 
 Requires `Authorization: Bearer <runner-token>`. Used for pairing and connectivity testing.
 
+### POST /v1/platforms/xiaohongshu/publish-note
+
+Requires the runner bearer token and multipart form data:
+
+- `account`
+- `title`
+- `content`
+- one or more `images`
+
+The runner writes images to a temporary local directory, publishes through the connected Xiaohongshu Chrome profile, then deletes the temporary files.
+
 ### POST /v1/publish
 
-Reserved for local publisher jobs. The Phase 2 foundation intentionally returns `501` until the first real adapter is installed.
+Reserved for future generic local routing.
 
 ## Security boundaries
 
 - Default bind address is `127.0.0.1`, not `0.0.0.0`.
 - Only configured web origins receive CORS access.
 - Privileged endpoints require a timing-safe bearer-token check.
-- Request bodies are capped at 1 MiB in the foundation server.
+- JSON request bodies are capped at 1 MiB. Xiaohongshu multipart publishing separately limits requests to 9 image files and 25 MB per image.
 - Browser cookies and platform credentials remain local.
 
-## Next: Xiaohongshu
+## Xiaohongshu
 
 Xiaohongshu authentication is the first real adapter capability.
 
@@ -62,6 +73,6 @@ Xiaohongshu authentication is the first real adapter capability.
 - **Check login** opens the same profile in headless mode and verifies the creator publish page does not redirect back to login.
 - No Xiaohongshu cookie or Chrome profile is sent to Vercel.
 
-Publishing remains disabled until authentication is validated separately. The next increment adds image-note publishing before video support.
+After authentication is validated, ButtonPost Web can send title/body/images directly to the Local Runner and publish an image note through the same local Chrome profile. The first publishing tests run headed by default so browser behavior stays visible.
 
 The browser behavior is independently implemented in Node.js using Patchright. The MIT-licensed `dreammis/social-auto-upload` Xiaohongshu flow is used as a reference for creator URLs, login-state checks, and the overall lifecycle.
