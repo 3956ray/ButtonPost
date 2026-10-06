@@ -79,7 +79,7 @@ One source post + source images
        per-platform results
 ```
 
-See [`docs/architecture.md`](docs/architecture.md) and [`docs/platform-matrix.md`](docs/platform-matrix.md).
+See [`docs/architecture.md`](docs/architecture.md), [`docs/media.md`](docs/media.md), and [`docs/platform-matrix.md`](docs/platform-matrix.md).
 
 ## Development
 
