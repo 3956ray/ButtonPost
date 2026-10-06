@@ -1,5 +1,6 @@
 import { TwitterApi } from 'twitter-api-v2'
 import { markdownToPlainText } from '@/lib/content/markdown-to-plain'
+import { splitForXThread } from './x-thread'
 import type {
   PublishResult,
   PublisherAdapter,
@@ -13,6 +14,11 @@ function xMaxLength(): number {
   return Number.isFinite(configured) && configured > 0 ? configured : 280
 }
 
+function xMaxThreadPosts(): number {
+  const configured = Number(process.env.X_MAX_THREAD_POSTS ?? '25')
+  return Number.isFinite(configured) && configured > 0 ? configured : 25
+}
+
 export function formatForX(post: SourcePost): string {
   return markdownToPlainText(post.content)
 }
@@ -21,9 +27,14 @@ export function validateForX(post: SourcePost): ValidationResult {
   const text = formatForX(post)
   if (!text) return { ok: false, error: 'X content is empty after Markdown normalization.' }
 
-  const limit = xMaxLength()
-  if (text.length > limit) {
-    return { ok: false, error: `X content is ${text.length} characters; configured limit is ${limit}.` }
+  const chunks = splitForXThread(text, xMaxLength())
+  const maxPosts = xMaxThreadPosts()
+
+  if (chunks.length > maxPosts) {
+    return {
+      ok: false,
+      error: `X content would require ${chunks.length} thread posts; configured maximum is ${maxPosts}.`,
+    }
   }
 
   return { ok: true }
@@ -134,21 +145,31 @@ async function publishWithClient(
   client: TwitterApi,
   post: SourcePost,
 ): Promise<PublishResult> {
+  const chunks = splitForXThread(formatForX(post), xMaxLength())
+  const postedIds: string[] = []
+
   try {
     const mediaIds = await uploadImages(client, post)
-    const payload: {
-      text: string
-      media?: { media_ids: string[] }
-    } = { text: formatForX(post) }
 
-    if (mediaIds.length) {
-      payload.media = { media_ids: mediaIds }
+    for (let index = 0; index < chunks.length; index += 1) {
+      const text = chunks[index]!
+      const result =
+        index === 0
+          ? await client.v2.tweet({
+              text,
+              ...(mediaIds.length
+                ? { media: { media_ids: mediaIds } }
+                : {}),
+            } as never)
+          : await client.v2.reply(text, postedIds[index - 1]!)
+
+      const id = result.data?.id
+      if (!id) throw new Error('X API did not return a post id.')
+      postedIds.push(id)
     }
 
-    const result = await client.v2.tweet(payload as never)
-    const id = result.data?.id
-
-    if (!id) {
+    const firstId = postedIds[0]
+    if (!firstId) {
       return {
         platform: 'x',
         status: 'failed',
@@ -159,11 +180,20 @@ async function publishWithClient(
     return {
       platform: 'x',
       status: 'published',
-      externalId: id,
-      externalUrl: `https://x.com/i/web/status/${id}`,
+      externalId: firstId,
+      externalUrl: `https://x.com/i/web/status/${firstId}`,
     }
   } catch (cause) {
-    return { platform: 'x', status: 'failed', error: unknownError(cause) }
+    const partial =
+      postedIds.length > 0
+        ? `X published ${postedIds.length} of ${chunks.length} thread posts before failing. First post: https://x.com/i/web/status/${postedIds[0]}. `
+        : ''
+
+    return {
+      platform: 'x',
+      status: 'failed',
+      error: partial + unknownError(cause),
+    }
   }
 }
 
