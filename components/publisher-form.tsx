@@ -382,7 +382,7 @@ export function PublisherForm({ platforms }: Props) {
             className="file-input"
             id="images"
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp,image/gif"
             multiple
             onChange={onImagesChange}
           />
