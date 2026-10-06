@@ -1,3 +1,4 @@
+import { LocalRunnerCard } from '@/components/local-runner-card'
 import { PublisherForm } from '@/components/publisher-form'
 import { getPlatformMetadata } from '@/lib/publishers/registry'
 
@@ -18,9 +19,10 @@ export default function HomePage() {
       </header>
 
       <PublisherForm platforms={platforms} />
+      <LocalRunnerCard />
 
       <footer className="footer">
-        <span>MVP 0.1 · X + DEV</span>
+        <span>MVP 0.2 · API publishers + Local Runner</span>
         <a href="https://github.com/3956ray/ButtonPost" target="_blank" rel="noreferrer">
           GitHub
         </a>
