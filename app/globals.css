@@ -193,3 +193,74 @@ button, input, textarea { font: inherit; }
   .runner-fields { grid-template-columns: 1fr; }
   .runner-actions code { margin-left: 0; }
 }
+
+.local-platform-card {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.local-platform-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.local-platform-header h3 { margin: 3px 0 0; font-size: 15px; }
+.local-platform-status {
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+}
+.local-platform-status.connected { color: var(--success); }
+.local-platform-status.error { color: var(--danger); }
+.local-platform-status.login,
+.local-platform-status.checking { color: var(--warning); }
+.local-platform-controls {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin-top: 14px;
+}
+.local-platform-controls label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+.local-platform-controls input {
+  width: 100%;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+  color: var(--text);
+  outline: none;
+}
+.local-platform-controls input:focus {
+  border-color: #7b7970;
+  box-shadow: 0 0 0 3px rgba(23,23,19,.06);
+}
+.local-platform-buttons { display: flex; gap: 8px; }
+.local-platform-buttons button {
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--accent);
+  color: white;
+  font-weight: 750;
+  cursor: pointer;
+}
+.local-platform-buttons button:disabled { opacity: .45; cursor: not-allowed; }
+.local-platform-buttons .secondary-button { background: var(--surface-2); color: var(--text); }
+.local-platform-message { margin: 10px 0 0; font-size: 12px; font-weight: 650; }
+.local-platform-message.error { color: var(--danger); }
+
+@media (max-width: 760px) {
+  .local-platform-controls { grid-template-columns: 1fr; }
+  .local-platform-buttons { flex-wrap: wrap; }
+}
