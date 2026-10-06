@@ -1,8 +1,17 @@
 'use client'
 
 import { uploadPresigned } from '@vercel/blob/client'
-import { ChangeEvent, FormEvent, useMemo, useState } from 'react'
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { markdownToPlainText } from '@/lib/content/markdown-to-plain'
+import { PublicationHistory } from '@/components/publication-history'
+import {
+  PUBLICATION_HISTORY_KEY,
+  parsePublicationHistory,
+  prependHistoryEntry,
+  updateHistoryResults,
+  type PublicationHistoryEntry,
+  type PublicationHistoryResult,
+} from '@/lib/publication-history'
 import type {
   PlatformId,
   PlatformMetadata,
@@ -73,8 +82,65 @@ export function PublisherForm({ platforms }: Props) {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [mediaProgress, setMediaProgress] = useState('')
+  const [history, setHistory] = useState<PublicationHistoryEntry[]>([])
+  const historyRef = useRef<PublicationHistoryEntry[]>([])
+  const [imageInputKey, setImageInputKey] = useState(0)
+
+  useEffect(() => {
+    const loaded = parsePublicationHistory(
+      window.localStorage.getItem(PUBLICATION_HISTORY_KEY),
+    )
+    historyRef.current = loaded
+    setHistory(loaded)
+  }, [])
 
   const sourceLength = useMemo(() => content.trim().length, [content])
+
+  function persistHistory(next: PublicationHistoryEntry[]) {
+    historyRef.current = next
+    setHistory(next)
+
+    try {
+      window.localStorage.setItem(PUBLICATION_HISTORY_KEY, JSON.stringify(next))
+    } catch {
+      // Publishing should keep working even if browser storage is unavailable.
+    }
+  }
+
+  function addHistoryEntry(entry: PublicationHistoryEntry) {
+    persistHistory(prependHistoryEntry(historyRef.current, entry))
+  }
+
+  function mergeHistoryResults(
+    id: string,
+    incoming: PublicationHistoryResult[],
+  ) {
+    persistHistory(updateHistoryResults(historyRef.current, id, incoming))
+  }
+
+  function clearHistory() {
+    if (!window.confirm('Clear publication history from this browser?')) return
+
+    historyRef.current = []
+    setHistory([])
+    window.localStorage.removeItem(PUBLICATION_HISTORY_KEY)
+  }
+
+  function reuseHistoryEntry(entry: PublicationHistoryEntry) {
+    setTitle(entry.title)
+    setContent(entry.content)
+    setSelected([...entry.selected])
+    setImages([])
+    setImageInputKey((value) => value + 1)
+    setResults([])
+    setMediaProgress('')
+    setError(
+      entry.imageNames.length
+        ? 'Text and destinations were restored. Browsers cannot restore local image files from history, so reselect the images before publishing again.'
+        : '',
+    )
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   function togglePlatform(id: DestinationId) {
     setSelected((current) =>
@@ -302,20 +368,37 @@ export function PublisherForm({ platforms }: Props) {
     setResults([])
     setMediaProgress('')
 
+    const historyId =
+      globalThis.crypto?.randomUUID?.() ||
+      `${Date.now()}-${Math.random().toString(36).slice(2)}`
+
+    addHistoryEntry({
+      id: historyId,
+      createdAt: new Date().toISOString(),
+      title: title.trim(),
+      content,
+      imageNames: images.map((image) => image.name),
+      selected: [...selected],
+      results: selected.map((platform) => ({
+        platform,
+        status: 'pending',
+      })),
+    })
+
     const serverPlatforms = selected.filter(
       (id): id is PlatformId => id !== 'xiaohongshu',
     )
     const wantsXiaohongshu = selected.includes('xiaohongshu')
 
     if (wantsXiaohongshu) {
-      upsertResults([
-        {
-          platform: 'xiaohongshu',
-          status: 'reviewing',
-          externalId:
-            'ButtonPost will fill the Xiaohongshu editor. Review it in Chrome and click Publish manually.',
-        },
-      ])
+      const reviewingResult: LocalPublishResult = {
+        platform: 'xiaohongshu',
+        status: 'reviewing',
+        externalId:
+          'ButtonPost filled the Xiaohongshu editor. Review it in Chrome and click Publish manually.',
+      }
+      upsertResults([reviewingResult])
+      mergeHistoryResults(historyId, [reviewingResult])
     }
 
     const tasks: Promise<void>[] = []
@@ -324,6 +407,7 @@ export function PublisherForm({ platforms }: Props) {
       tasks.push(
         publishServerFlow(serverPlatforms).then((serverResults) => {
           upsertResults(serverResults)
+          mergeHistoryResults(historyId, serverResults)
         }),
       )
     }
@@ -332,6 +416,7 @@ export function PublisherForm({ platforms }: Props) {
       tasks.push(
         publishXiaohongshu().then((xiaohongshuResult) => {
           upsertResults([xiaohongshuResult])
+          mergeHistoryResults(historyId, [xiaohongshuResult])
         }),
       )
     }
@@ -339,17 +424,31 @@ export function PublisherForm({ platforms }: Props) {
     try {
       await Promise.all(tasks)
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : 'Unexpected publish orchestration error.',
-      )
+      const message =
+        cause instanceof Error
+          ? cause.message
+          : 'Unexpected publish orchestration error.'
+      setError(message)
+
+      const attempt = historyRef.current.find((entry) => entry.id === historyId)
+      const unresolved =
+        attempt?.results
+          .filter((result) => result.status === 'pending')
+          .map((result) => ({
+            ...result,
+            status: 'failed' as const,
+            error: message,
+          })) ?? []
+
+      if (unresolved.length) mergeHistoryResults(historyId, unresolved)
     } finally {
       setSubmitting(false)
       setMediaProgress('')
     }
   }
-
   return (
-    <form className="composer" onSubmit={onSubmit}>
+    <>
+      <form className="composer" onSubmit={onSubmit}>
       <section className="editor-pane">
         <label className="label" htmlFor="title">Title</label>
         <input
@@ -379,6 +478,7 @@ export function PublisherForm({ platforms }: Props) {
         <div className="media-field">
           <label className="label" htmlFor="images">Images</label>
           <input
+            key={imageInputKey}
             className="file-input"
             id="images"
             type="file"
@@ -499,6 +599,13 @@ export function PublisherForm({ platforms }: Props) {
           </div>
         </section>
       ) : null}
-    </form>
+      </form>
+
+      <PublicationHistory
+        entries={history}
+        onReuse={reuseHistoryEntry}
+        onClear={clearHistory}
+      />
+    </>
   )
 }
