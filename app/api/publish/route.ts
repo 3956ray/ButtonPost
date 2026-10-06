@@ -1,0 +1,45 @@
+import { publishEverywhere } from '@/lib/publishers/publish-everywhere'
+import { PLATFORM_IDS, type PlatformId } from '@/lib/publishers/types'
+import { authorizePublish } from '@/lib/security/publish-secret'
+
+export const runtime = 'nodejs'
+
+type PublishRequest = {
+  title?: unknown
+  content?: unknown
+  platforms?: unknown
+  secret?: unknown
+}
+
+function isPlatformId(value: unknown): value is PlatformId {
+  return typeof value === 'string' && (PLATFORM_IDS as readonly string[]).includes(value)
+}
+
+export async function POST(request: Request) {
+  let body: PublishRequest
+  try {
+    body = (await request.json()) as PublishRequest
+  } catch {
+    return Response.json({ error: 'Request body must be valid JSON.' }, { status: 400 })
+  }
+
+  const auth = authorizePublish(body.secret)
+  if (!auth.ok) return Response.json({ error: auth.error }, { status: auth.status })
+
+  if (typeof body.title !== 'string' || !body.title.trim()) {
+    return Response.json({ error: 'Title is required.' }, { status: 400 })
+  }
+  if (typeof body.content !== 'string' || !body.content.trim()) {
+    return Response.json({ error: 'Content is required.' }, { status: 400 })
+  }
+  if (!Array.isArray(body.platforms) || body.platforms.length === 0 || !body.platforms.every(isPlatformId)) {
+    return Response.json({ error: 'Choose at least one supported platform.' }, { status: 400 })
+  }
+
+  const results = await publishEverywhere(
+    { title: body.title.trim(), content: body.content },
+    body.platforms,
+  )
+
+  return Response.json({ results })
+}
