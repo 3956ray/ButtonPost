@@ -15,7 +15,7 @@ The first runnable slice supports:
 - Parallel publishing with per-platform published / draft / failed / skipped results.
 - A server-side publish key so a deployed personal instance is not an open publishing endpoint.
 
-Phase 2 adds a **Local Runner** so browser-automated platforms can execute on the user's own computer without sending browser cookies to Vercel. Xiaohongshu is the first planned local adapter.
+Phase 2 adds a **Local Runner** so browser-automated platforms can execute on the user's own computer without sending browser cookies to Vercel. Xiaohongshu local login/check is the first adapter capability; image-note publishing is next.
 
 ## Local setup
 
@@ -27,6 +27,7 @@ npm install
 npm run dev
 
 # In another terminal, for local/browser publishers:
+# Google Chrome must be installed locally.
 npm run runner
 ```
 
