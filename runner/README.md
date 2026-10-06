@@ -36,8 +36,12 @@ BUTTONPOST_RUNNER_HOST=127.0.0.1
 BUTTONPOST_RUNNER_PORT=27123
 BUTTONPOST_RUNNER_TOKEN=choose-a-stable-local-token
 BUTTONPOST_ALLOWED_ORIGINS=https://buttonpost.vercel.app,http://localhost:3000
-# Optional. Default is false so the first publishing tests are visible.
+# Optional. Default is false so publishing is visible.
 BUTTONPOST_XHS_HEADLESS=false
+# Default false: fill the editor, then wait for you to review and click Publish.
+BUTTONPOST_XHS_AUTO_PUBLISH=false
+# Manual review window before ButtonPost gives up waiting.
+BUTTONPOST_XHS_REVIEW_TIMEOUT_MINUTES=30
 ```
 
 If you set `BUTTONPOST_RUNNER_TOKEN`, the same token can be reused after restarts.
@@ -87,7 +91,9 @@ Current MVP behavior:
 - Markdown source content is mechanically normalized to plain text;
 - up to 9 images are accepted by ButtonPost, with a 25 MB per-image runner limit;
 - publishing uses the connected local account profile;
-- the Chrome window is visible by default for the first production tests;
+- the Chrome window is visible by default;
+- **review-before-publish is the default**: ButtonPost fills the post and then waits up to 30 minutes for you to edit hashtags/formatting and click Publish manually;
+- set `BUTTONPOST_XHS_AUTO_PUBLISH=true` only when you explicitly want fully automatic publishing;
 - success/failure is returned as a separate platform result.
 
 Tags, scheduling, cover selection, video, and final-note URL lookup come later.
