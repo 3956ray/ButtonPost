@@ -10,8 +10,8 @@ The product is intentionally **not** a content-variant generator. Platform adapt
 
 The first runnable slice supports:
 
-- **X** through the official X API v2 create-post endpoint.
-- **DEV Community** through the official Forem article API.
+- **X** through the official X API, including up to 4 source images per post.
+- **DEV Community** through the official Forem article API, including public source images and a cover image.
 - Parallel publishing with per-platform published / draft / failed / skipped results.
 - A server-side publish key so a deployed personal instance is not an open publishing endpoint.
 
@@ -47,11 +47,23 @@ X_MAX_LENGTH=280
 DEVTO_API_KEY=...
 DEVTO_TAGS=ai,webdev
 DEVTO_DRAFT_ONLY=false
+BLOB_READ_WRITE_TOKEN=...
 ```
 
 `X_USER_ACCESS_TOKEN` must be an OAuth 2.0 **user-context** token allowed to create posts; the application-only Bearer Token will be rejected. For the quickest manual test, configure OAuth 1.0a with `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, and `X_ACCESS_TOKEN_SECRET`. `DEVTO_API_KEY` must belong to the DEV author account.
 
 For safe DEV testing, set `DEVTO_DRAFT_ONLY=true` before clicking Publish Everywhere. ButtonPost reports that result as `draft`; set it to `false` when you want the same action to publish publicly.
+
+### Shared images for X + DEV
+
+Local source images are uploaded directly from the browser to a **public Vercel Blob store** before server publishers run. This avoids pushing large image bodies through the ButtonPost server function.
+
+- X fetches the Blob images server-side, uploads up to the first 4 to X Media, then attaches their media IDs to the post.
+- DEV uses the first image as `main_image`; any remaining images are appended to the article Markdown.
+- Blob URLs must remain public because DEV articles reference them after publication.
+- The browser never exposes `BLOB_READ_WRITE_TOKEN`. ButtonPost exchanges the Publish key for a short-lived media-only upload ticket first.
+
+Connect a public Blob store to the ButtonPost Vercel project so Vercel provides `BLOB_READ_WRITE_TOKEN`. Text-only X / DEV publishing continues to work without Blob storage.
 
 ## Architecture
 
@@ -67,7 +79,7 @@ One source post + source images
        per-platform results
 ```
 
-See [`docs/architecture.md`](docs/architecture.md) and [`docs/platform-matrix.md`](docs/platform-matrix.md).
+See [`docs/architecture.md`](docs/architecture.md), [`docs/media.md`](docs/media.md), and [`docs/platform-matrix.md`](docs/platform-matrix.md).
 
 ## Development
 

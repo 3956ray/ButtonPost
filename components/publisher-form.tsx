@@ -1,8 +1,14 @@
 'use client'
 
+import { upload } from '@vercel/blob/client'
 import { ChangeEvent, FormEvent, useMemo, useState } from 'react'
 import { markdownToPlainText } from '@/lib/content/markdown-to-plain'
-import type { PlatformId, PlatformMetadata, PublishResult } from '@/lib/publishers/types'
+import type {
+  PlatformId,
+  PlatformMetadata,
+  PublishResult,
+  SourceMedia,
+} from '@/lib/publishers/types'
 
 type Props = {
   platforms: PlatformMetadata[]
@@ -17,7 +23,7 @@ type DestinationId = PlatformId | 'xiaohongshu'
 
 type LocalPublishResult = {
   platform: 'xiaohongshu'
-  status: 'published' | 'failed' | 'skipped'
+  status: 'published' | 'reviewing' | 'failed' | 'skipped'
   externalId?: string
   externalUrl?: string
   error?: string
@@ -50,6 +56,11 @@ function platformLabel(id: DisplayPublishResult['platform']) {
   return 'X'
 }
 
+function safeUploadName(file: File, index: number) {
+  const cleaned = file.name.replace(/[^a-zA-Z0-9._-]+/g, '-').slice(-120)
+  return `buttonpost/${Date.now()}-${index + 1}-${cleaned || 'image'}`
+}
+
 export function PublisherForm({ platforms }: Props) {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
@@ -61,6 +72,7 @@ export function PublisherForm({ platforms }: Props) {
   const [results, setResults] = useState<DisplayPublishResult[]>([])
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [mediaProgress, setMediaProgress] = useState('')
 
   const sourceLength = useMemo(() => content.trim().length, [content])
 
@@ -72,19 +84,89 @@ export function PublisherForm({ platforms }: Props) {
     )
   }
 
+  function upsertResults(next: DisplayPublishResult[]) {
+    setResults((current) => {
+      const map = new Map<DisplayPublishResult['platform'], DisplayPublishResult>()
+      for (const result of current) map.set(result.platform, result)
+      for (const result of next) map.set(result.platform, result)
+      return [...map.values()]
+    })
+  }
+
   function onImagesChange(event: ChangeEvent<HTMLInputElement>) {
     const next = Array.from(event.target.files ?? [])
     if (next.length > 9) {
       setImages(next.slice(0, 9))
-      setError('ButtonPost currently sends at most 9 images to Xiaohongshu; the first 9 were kept.')
+      setError(
+        'ButtonPost currently accepts at most 9 source images; the first 9 were kept.',
+      )
       return
     }
+
     setError('')
     setImages(next)
   }
 
+  async function uploadImagesForServerPlatforms(): Promise<SourceMedia[]> {
+    if (!images.length) return []
+
+    if (!secret.trim()) {
+      throw new Error(
+        'Publish key is required before ButtonPost can upload images for X or DEV.',
+      )
+    }
+
+    setMediaProgress('Preparing media upload...')
+
+    try {
+      const ticketResponse = await fetch('/api/media/ticket', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret }),
+      })
+      const ticketData = (await ticketResponse.json().catch(() => ({}))) as {
+        ticket?: string
+        error?: string
+      }
+
+      if (!ticketResponse.ok || !ticketData.ticket) {
+        throw new Error(
+          ticketData.error ||
+            'ButtonPost could not create a temporary media upload ticket.',
+        )
+      }
+
+      setMediaProgress('Uploading source images for X / DEV...')
+
+      return await Promise.all(
+        images.map(async (image, index) => {
+          const blob = await upload(safeUploadName(image, index), image, {
+            access: 'public',
+            handleUploadUrl: '/api/media/upload',
+            clientPayload: JSON.stringify({ ticket: ticketData.ticket }),
+            multipart: image.size > 4 * 1024 * 1024,
+          })
+
+          return {
+            url: blob.url,
+            name: image.name,
+            contentType: image.type || undefined,
+          }
+        }),
+      )
+    } catch (cause) {
+      throw new Error(
+        'Could not upload images for X / DEV. Connect a public Vercel Blob store to ButtonPost and make sure BLOB_READ_WRITE_TOKEN is available. ' +
+          (cause instanceof Error ? cause.message : ''),
+      )
+    } finally {
+      setMediaProgress('')
+    }
+  }
+
   async function publishServerPlatforms(
     serverPlatforms: PlatformId[],
+    media: SourceMedia[],
   ): Promise<DisplayPublishResult[]> {
     if (!serverPlatforms.length) return []
 
@@ -97,6 +179,7 @@ export function PublisherForm({ platforms }: Props) {
           content,
           platforms: serverPlatforms,
           secret,
+          media,
         }),
       })
       const data = (await response.json().catch(() => ({}))) as ApiResponse
@@ -122,6 +205,25 @@ export function PublisherForm({ platforms }: Props) {
     }
   }
 
+  async function publishServerFlow(
+    serverPlatforms: PlatformId[],
+  ): Promise<DisplayPublishResult[]> {
+    if (!serverPlatforms.length) return []
+
+    try {
+      const media = images.length ? await uploadImagesForServerPlatforms() : []
+      return await publishServerPlatforms(serverPlatforms, media)
+    } catch (cause) {
+      const message =
+        cause instanceof Error ? cause.message : 'Could not prepare server media.'
+      return serverPlatforms.map((platform) => ({
+        platform,
+        status: 'failed',
+        error: message,
+      }))
+    }
+  }
+
   async function publishXiaohongshu(): Promise<LocalPublishResult> {
     if (!images.length) {
       return {
@@ -131,7 +233,9 @@ export function PublisherForm({ platforms }: Props) {
       }
     }
 
-    const runnerUrl = window.localStorage.getItem(RUNNER_URL_KEY)?.replace(/\/$/, '')
+    const runnerUrl = window.localStorage
+      .getItem(RUNNER_URL_KEY)
+      ?.replace(/\/$/, '')
     const runnerToken = window.localStorage.getItem(RUNNER_TOKEN_KEY)
     const account = window.localStorage.getItem(XHS_ACCOUNT_KEY) || 'default'
 
@@ -196,29 +300,51 @@ export function PublisherForm({ platforms }: Props) {
     setSubmitting(true)
     setError('')
     setResults([])
+    setMediaProgress('')
+
+    const serverPlatforms = selected.filter(
+      (id): id is PlatformId => id !== 'xiaohongshu',
+    )
+    const wantsXiaohongshu = selected.includes('xiaohongshu')
+
+    if (wantsXiaohongshu) {
+      upsertResults([
+        {
+          platform: 'xiaohongshu',
+          status: 'reviewing',
+          externalId:
+            'ButtonPost will fill the Xiaohongshu editor. Review it in Chrome and click Publish manually.',
+        },
+      ])
+    }
+
+    const tasks: Promise<void>[] = []
+
+    if (serverPlatforms.length) {
+      tasks.push(
+        publishServerFlow(serverPlatforms).then((serverResults) => {
+          upsertResults(serverResults)
+        }),
+      )
+    }
+
+    if (wantsXiaohongshu) {
+      tasks.push(
+        publishXiaohongshu().then((xiaohongshuResult) => {
+          upsertResults([xiaohongshuResult])
+        }),
+      )
+    }
 
     try {
-      const serverPlatforms = selected.filter(
-        (id): id is PlatformId => id !== 'xiaohongshu',
-      )
-      const wantsXiaohongshu = selected.includes('xiaohongshu')
-
-      const [serverResults, xiaohongshuResult] = await Promise.all([
-        publishServerPlatforms(serverPlatforms),
-        wantsXiaohongshu ? publishXiaohongshu() : Promise.resolve(null),
-      ])
-
-      setResults(
-        xiaohongshuResult
-          ? [...serverResults, xiaohongshuResult]
-          : serverResults,
-      )
+      await Promise.all(tasks)
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : 'Unexpected publish orchestration error.',
       )
     } finally {
       setSubmitting(false)
+      setMediaProgress('')
     }
   }
 
@@ -256,13 +382,14 @@ export function PublisherForm({ platforms }: Props) {
             className="file-input"
             id="images"
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp,image/gif"
             multiple
             onChange={onImagesChange}
           />
           <p className="helper">
-            Optional for X / DEV in this MVP. Required when Xiaohongshu is selected. Images sent to Xiaohongshu go directly from this browser to your Local Runner.
+            One source image set. X attaches up to 4 images, DEV stores the images in the article, and Xiaohongshu sends them directly to your Local Runner. Up to 9 source images are accepted.
           </p>
+          {mediaProgress ? <p className="media-progress">{mediaProgress}</p> : null}
           {images.length > 0 ? (
             <div className="media-summary">
               <strong>{images.length} image{images.length === 1 ? '' : 's'} selected</strong>
@@ -307,7 +434,7 @@ export function PublisherForm({ platforms }: Props) {
                 <span className="dot local" />
                 Xiaohongshu · 小红书
               </span>
-              <span className="platform-note">Local Runner · image note</span>
+              <span className="platform-note">Local Runner · review before publish</span>
             </span>
           </label>
         </div>
@@ -324,7 +451,7 @@ export function PublisherForm({ platforms }: Props) {
             placeholder="BUTTONPOST_SECRET"
           />
           <p className="helper">
-            Used only for server publishers such as X and DEV. Local Runner publishing does not send this key to Xiaohongshu.
+            Used for X / DEV publishing and server media uploads. Xiaohongshu media goes only to your Local Runner.
           </p>
         </div>
 

@@ -23,7 +23,8 @@
     "react-dom": "19.3.0",
     "twitter-api-v2": "^1.29.0",
     "patchright": "1.63.0",
-    "busboy": "^1.6.0"
+    "busboy": "^1.6.0",
+    "@vercel/blob": "^2.4.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
