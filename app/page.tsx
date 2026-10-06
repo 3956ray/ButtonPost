@@ -22,7 +22,7 @@ export default function HomePage() {
       <LocalRunnerCard />
 
       <footer className="footer">
-        <span>MVP 0.2 · API publishers + Local Runner</span>
+        <span>MVP 0.3 · X + DEV + Xiaohongshu</span>
         <a href="https://github.com/3956ray/ButtonPost" target="_blank" rel="noreferrer">
           GitHub
         </a>
