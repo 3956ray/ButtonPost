@@ -264,3 +264,41 @@ button, input, textarea { font: inherit; }
   .local-platform-controls { grid-template-columns: 1fr; }
   .local-platform-buttons { flex-wrap: wrap; }
 }
+
+.dot.local { background: #7b7970; }
+
+.media-field {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.file-input {
+  width: 100%;
+  padding: 10px 11px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: white;
+  color: var(--muted);
+}
+.media-summary {
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 10px 11px;
+  border-radius: 9px;
+  background: var(--surface-2);
+  font-size: 11px;
+}
+.media-summary span {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.selection-warning {
+  margin: 12px 0 0;
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: #fff7df;
+  color: var(--warning);
+  font-size: 11px;
+  line-height: 1.45;
+}

@@ -15,7 +15,7 @@ The first runnable slice supports:
 - Parallel publishing with per-platform published / draft / failed / skipped results.
 - A server-side publish key so a deployed personal instance is not an open publishing endpoint.
 
-Phase 2 adds a **Local Runner** so browser-automated platforms can execute on the user's own computer without sending browser cookies to Vercel. Xiaohongshu local login/check is the first adapter capability; image-note publishing is next.
+Phase 2 adds a **Local Runner** so browser-automated platforms can execute on the user's own computer without sending browser cookies to Vercel. Xiaohongshu login/check and image-note publishing now run locally through the user's own Chrome session.
 
 ## Local setup
 
@@ -56,14 +56,15 @@ For safe DEV testing, set `DEVTO_DRAFT_ONLY=true` before clicking Publish Everyw
 ## Architecture
 
 ```text
-One source post
-      |
-      v
-Publisher registry
-   /       \
-X API     DEV API
-   \       /
- per-platform results
+One source post + source images
+             |
+      +------+------+
+      |             |
+      v             v
+ Server API      Local Runner
+ X / DEV        Xiaohongshu
+      \             /
+       per-platform results
 ```
 
 See [`docs/architecture.md`](docs/architecture.md) and [`docs/platform-matrix.md`](docs/platform-matrix.md).
@@ -76,7 +77,7 @@ npm test
 npm run build
 ```
 
-The X + DEV API pipeline is verified. Phase 2 now builds the Local Runner bridge first, then adds browser publishers beginning with Xiaohongshu. See [`docs/local-runner.md`](docs/local-runner.md).
+The X + DEV API pipeline and Local Runner pairing/auth flow are verified. Xiaohongshu image-note publishing is now the first browser publisher integrated into `Publish everywhere`. See [`docs/local-runner.md`](docs/local-runner.md).
 
 ## Open-source references
 
