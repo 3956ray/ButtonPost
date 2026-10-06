@@ -16,14 +16,20 @@ Do not delete an image from Blob while a DEV article still references it.
 
 ## Upload authorization
 
-The Blob read/write token remains server-side.
+Blob credentials remain server-side. ButtonPost supports two Vercel Blob authentication modes:
+
+- preferred: Vercel OIDC with `VERCEL_OIDC_TOKEN + BLOB_STORE_ID`;
+- fallback: legacy `BLOB_READ_WRITE_TOKEN`.
+
+The upload itself uses a constrained presigned URL:
 
 1. Browser sends the normal ButtonPost publish key to `/api/media/ticket`.
 2. ButtonPost returns a five-minute media-only HMAC ticket.
-3. The browser gives that ticket to the Vercel Blob client upload handler.
-4. The handler verifies the ticket before issuing the scoped Blob client token.
+3. The browser sends that ticket to the media upload route.
+4. The route validates it and asks Vercel Blob for a five-minute, pathname-scoped `put` delegation.
+5. The browser uploads directly to Vercel Blob using the resulting presigned upload.
 
-The long-lived `BUTTONPOST_SECRET` is not embedded in the Blob client payload.
+Neither the long-lived `BUTTONPOST_SECRET` nor Blob credentials are exposed to the browser.
 
 ## Limits
 
