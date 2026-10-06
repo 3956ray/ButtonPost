@@ -12,7 +12,7 @@ The first runnable slice supports:
 
 - **X** through the official X API v2 create-post endpoint.
 - **DEV Community** through the official Forem article API.
-- Parallel publishing with per-platform success / failure / skipped results.
+- Parallel publishing with per-platform published / draft / failed / skipped results.
 - A server-side publish key so a deployed personal instance is not an open publishing endpoint.
 
 Next targets: 即刻, 登链社区, Indie Hackers through a local browser-extension runtime.
@@ -42,7 +42,7 @@ DEVTO_DRAFT_ONLY=false
 
 `X_USER_ACCESS_TOKEN` must be a user-context token allowed to create posts. `DEVTO_API_KEY` must belong to the DEV author account.
 
-For safe DEV testing, set `DEVTO_DRAFT_ONLY=true` before clicking Publish Everywhere.
+For safe DEV testing, set `DEVTO_DRAFT_ONLY=true` before clicking Publish Everywhere. ButtonPost reports that result as `draft`; set it to `false` when you want the same action to publish publicly.
 
 ## Architecture
 
