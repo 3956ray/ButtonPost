@@ -13,6 +13,21 @@ export function validateForDevto(post: SourcePost): ValidationResult {
   return { ok: true }
 }
 
+function withImages(post: SourcePost): string {
+  if (!post.media?.length) return post.content
+
+  const imageMarkdown = post.media
+    .map((media, index) => {
+      const alt = (media.name || `Image ${index + 1}`)
+        .replace(/[\[\]]/g, '')
+        .trim()
+      return `![${alt || `Image ${index + 1}`}](${media.url})`
+    })
+    .join('\n\n')
+
+  return `${post.content.trim()}\n\n${imageMarkdown}`
+}
+
 function tags(): string | undefined {
   const value = process.env.DEVTO_TAGS?.trim()
   if (!value) return undefined
@@ -57,8 +72,9 @@ export const devtoPublisher: PublisherAdapter = {
       body: JSON.stringify({
         article: {
           title: post.title.trim(),
-          body_markdown: post.content,
+          body_markdown: withImages(post),
           published: !draftOnly,
+          ...(post.media?.[0]?.url ? { main_image: post.media[0].url } : {}),
           ...(tags() ? { tags: tags() } : {}),
         },
       }),
