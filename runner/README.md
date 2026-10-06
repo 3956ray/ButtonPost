@@ -8,7 +8,8 @@ Phase 2 starts with a deliberately small contract:
 - `POST /v1/echo` — verify pairing with a local-only runner token.
 - `GET /v1/platforms/xiaohongshu/status` — validate a locally stored Xiaohongshu login.
 - `POST /v1/platforms/xiaohongshu/login` — open local Chrome and wait for interactive login.
-- `POST /v1/publish` — reserved for local platform publishing; currently returns `501`.
+- `POST /v1/platforms/xiaohongshu/publish-note` — receive title/body/images from ButtonPost Web and publish through the local Chrome profile.
+- `POST /v1/publish` — reserved for future generic local routing.
 
 ## Start
 
@@ -35,6 +36,8 @@ BUTTONPOST_RUNNER_HOST=127.0.0.1
 BUTTONPOST_RUNNER_PORT=27123
 BUTTONPOST_RUNNER_TOKEN=choose-a-stable-local-token
 BUTTONPOST_ALLOWED_ORIGINS=https://buttonpost.vercel.app,http://localhost:3000
+# Optional. Default is false so the first publishing tests are visible.
+BUTTONPOST_XHS_HEADLESS=false
 ```
 
 If you set `BUTTONPOST_RUNNER_TOKEN`, the same token can be reused after restarts.
@@ -72,6 +75,19 @@ No content is published during authentication.
 
 The flow is independently implemented in Node.js while using the MIT-licensed `dreammis/social-auto-upload` project as a behavioral reference for login-state validation and creator-page navigation.
 
-## Next
+## Xiaohongshu image-note publishing
 
-The next increment adds Xiaohongshu image-note publishing, including local image transfer, title/body/tags, progress, and result reporting.
+Select **Xiaohongshu · 小红书** in ButtonPost, attach at least one image, and click **Publish everywhere**.
+
+The browser sends the selected images directly to the Local Runner as multipart data. They are written to a temporary local directory, used by Patchright/Chrome for upload, and deleted after the publish attempt. They are not proxied through Vercel.
+
+Current MVP behavior:
+
+- source title is mechanically limited to the first 20 characters for Xiaohongshu;
+- Markdown source content is mechanically normalized to plain text;
+- up to 9 images are accepted by ButtonPost, with a 25 MB per-image runner limit;
+- publishing uses the connected local account profile;
+- the Chrome window is visible by default for the first production tests;
+- success/failure is returned as a separate platform result.
+
+Tags, scheduling, cover selection, video, and final-note URL lookup come later.
