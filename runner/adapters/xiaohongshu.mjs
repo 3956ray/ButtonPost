@@ -372,7 +372,8 @@ export async function publishXiaohongshuNote({
 
       const description = page.locator('p[data-placeholder*="输入正文描述"]').first()
       await description.waitFor({ state: 'visible', timeout: 30_000 })
-      await description.fill(normalizedContent)
+      await description.click()
+      await page.keyboard.insertText(normalizedContent)
 
       const publishButton = page.locator('button:has-text("发布")').first()
       await publishButton.waitFor({ state: 'visible', timeout: 30_000 })
