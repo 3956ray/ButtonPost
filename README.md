@@ -4,7 +4,7 @@
 
 ButtonPost is a personal-first, open-source multi-platform publishing tool. Write one source post, select destinations, press one button, and get an independent result for every platform.
 
-The product is is intentionally **not** a content-variant generator. Platform adapters can perform mechanical compatibility work (Markdown to plain text, HTML cleanup, media upload, field mapping), but the source content remains one post.
+The product is intentionally **not** a content-variant generator. Platform adapters can perform mechanical compatibility work (Markdown to plain text, HTML cleanup, media upload, field mapping), but the source content remains one post.
 
 ## MVP status
 
@@ -42,7 +42,7 @@ DEVTO_DRAFT_ONLY=false
 
 `X_USER_ACCESS_TOKEN` must be a user-context token allowed to create posts. `DEVTO_API_KEY` must belong to the DEV author account.
 
-For safe DEV testing, set `DEYTO_DRAFT_ONLY=true` before clicking Publish Everywhere.
+For safe DEV testing, set `DEVTO_DRAFT_ONLY=true` before clicking Publish Everywhere.
 
 ## Architecture
 
