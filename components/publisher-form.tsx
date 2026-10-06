@@ -1,6 +1,6 @@
 'use client'
 
-import { upload } from '@vercel/blob/client'
+import { uploadPresigned } from '@vercel/blob/client'
 import { ChangeEvent, FormEvent, useMemo, useState } from 'react'
 import { markdownToPlainText } from '@/lib/content/markdown-to-plain'
 import type {
@@ -140,7 +140,7 @@ export function PublisherForm({ platforms }: Props) {
 
       return await Promise.all(
         images.map(async (image, index) => {
-          const blob = await upload(safeUploadName(image, index), image, {
+          const blob = await uploadPresigned(safeUploadName(image, index), image, {
             access: 'public',
             handleUploadUrl: '/api/media/upload',
             clientPayload: JSON.stringify({ ticket: ticketData.ticket }),
@@ -156,7 +156,7 @@ export function PublisherForm({ platforms }: Props) {
       )
     } catch (cause) {
       throw new Error(
-        'Could not upload images for X / DEV. Connect a public Vercel Blob store to ButtonPost and make sure BLOB_READ_WRITE_TOKEN is available. ' +
+        'Could not upload images for X / DEV. Connect a public Vercel Blob store to ButtonPost so BLOB_STORE_ID (OIDC) or BLOB_READ_WRITE_TOKEN is available. ' +
           (cause instanceof Error ? cause.message : ''),
       )
     } finally {
