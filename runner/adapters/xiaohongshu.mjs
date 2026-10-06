@@ -288,6 +288,16 @@ function xiaohongshuHeadless() {
   return process.env.BUTTONPOST_XHS_HEADLESS === 'true'
 }
 
+function xiaohongshuAutoPublish() {
+  return process.env.BUTTONPOST_XHS_AUTO_PUBLISH === 'true'
+}
+
+function xiaohongshuReviewTimeoutMs() {
+  const minutes = Number(process.env.BUTTONPOST_XHS_REVIEW_TIMEOUT_MINUTES || '30')
+  const normalized = Number.isFinite(minutes) && minutes > 0 ? minutes : 30
+  return normalized * 60 * 1000
+}
+
 export async function publishXiaohongshuNote({
   account = 'default',
   title,
@@ -378,19 +388,36 @@ export async function publishXiaohongshuNote({
       const publishButton = page.locator('button:has-text("发布")').first()
       await publishButton.waitFor({ state: 'visible', timeout: 30_000 })
 
-      await Promise.all([
-        page.waitForURL(
+      if (xiaohongshuAutoPublish()) {
+        await Promise.all([
+          page.waitForURL(
+            (url) => url.origin === CREATOR_BASE_URL && url.pathname.includes('/publish/success'),
+            { timeout: 60_000 },
+          ),
+          publishButton.click(),
+        ])
+      } else {
+        const timeoutMs = xiaohongshuReviewTimeoutMs()
+        console.log('')
+        console.log('Xiaohongshu review mode')
+        console.log('  ButtonPost filled the title, body, and images.')
+        console.log('  Review/edit hashtags or formatting in Chrome, then click Publish manually.')
+        console.log('  Waiting up to ' + Math.round(timeoutMs / 60000) + ' minutes...')
+        console.log('')
+
+        await page.waitForURL(
           (url) => url.origin === CREATOR_BASE_URL && url.pathname.includes('/publish/success'),
-          { timeout: 60_000 },
-        ),
-        publishButton.click(),
-      ])
+          { timeout: timeoutMs },
+        )
+      }
 
       return {
         ok: true,
         platform: 'xiaohongshu',
         status: 'published',
-        message: 'Xiaohongshu image note published successfully.',
+        message: xiaohongshuAutoPublish()
+          ? 'Xiaohongshu image note published automatically.'
+          : 'Xiaohongshu image note published after manual review.',
       }
     } catch (cause) {
       throw chromeLaunchError(cause)
