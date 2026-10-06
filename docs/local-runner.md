@@ -55,6 +55,13 @@ Reserved for local publisher jobs. The Phase 2 foundation intentionally returns 
 
 ## Next: Xiaohongshu
 
-The first real local adapter will cover login/QR flow, stored browser-state validation, image-note publishing, video publishing, and per-platform result reporting.
+Xiaohongshu authentication is the first real adapter capability.
 
-The implementation will use the MIT-licensed `dreammis/social-auto-upload` project as a reference for its Patchright, QR-login, cookie-state, upload, and scheduling patterns.
+- A named local account maps to a dedicated Chrome profile.
+- **Connect Xiaohongshu** opens local Chrome in headed mode so the user can complete QR/login interactively.
+- **Check login** opens the same profile in headless mode and verifies the creator publish page does not redirect back to login.
+- No Xiaohongshu cookie or Chrome profile is sent to Vercel.
+
+Publishing remains disabled until authentication is validated separately. The next increment adds image-note publishing before video support.
+
+The browser behavior is independently implemented in Node.js using Patchright. The MIT-licensed `dreammis/social-auto-upload` Xiaohongshu flow is used as a reference for creator URLs, login-state checks, and the overall lifecycle.
