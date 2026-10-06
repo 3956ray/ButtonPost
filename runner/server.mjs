@@ -1,8 +1,12 @@
 import { randomBytes } from 'node:crypto'
 import { createServer } from 'node:http'
 import { corsHeaders, isAuthorized, isOriginAllowed, parseAllowedOrigins } from './lib.mjs'
+import {
+  getXiaohongshuStatus,
+  loginXiaohongshu,
+} from './adapters/xiaohongshu.mjs'
 
-const VERSION = '0.1.0'
+const VERSION = '0.2.0'
 const host = process.env.BUTTONPOST_RUNNER_HOST || '127.0.0.1'
 const port = Number(process.env.BUTTONPOST_RUNNER_PORT || '27123')
 const token = process.env.BUTTONPOST_RUNNER_TOKEN || randomBytes(24).toString('base64url')
@@ -33,9 +37,16 @@ async function readJson(req) {
   return JSON.parse(Buffer.concat(chunks).toString('utf8'))
 }
 
+function errorBody(cause) {
+  return {
+    error: cause instanceof Error ? cause.message : 'Unexpected local runner error.',
+  }
+}
+
 const server = createServer(async (req, res) => {
   const origin = req.headers.origin
   const cors = corsHeaders(origin, allowedOrigins)
+  const requestUrl = new URL(req.url || '/', 'http://' + host + ':' + port)
 
   if (!isOriginAllowed(origin, allowedOrigins)) {
     return sendJson(res, 403, { error: 'Origin is not allowed by this ButtonPost runner.' }, cors)
@@ -46,7 +57,7 @@ const server = createServer(async (req, res) => {
     return res.end()
   }
 
-  if (req.method === 'GET' && req.url === '/health') {
+  if (req.method === 'GET' && requestUrl.pathname === '/health') {
     return sendJson(
       res,
       200,
@@ -55,7 +66,7 @@ const server = createServer(async (req, res) => {
         name: 'ButtonPost Local Runner',
         version: VERSION,
         status: 'ready',
-        capabilities: [],
+        capabilities: ['xiaohongshu:auth'],
       },
       cors,
     )
@@ -65,7 +76,7 @@ const server = createServer(async (req, res) => {
     return sendJson(res, 401, { error: 'Invalid runner token.' }, cors)
   }
 
-  if (req.method === 'POST' && req.url === '/v1/echo') {
+  if (req.method === 'POST' && requestUrl.pathname === '/v1/echo') {
     try {
       const body = await readJson(req)
       return sendJson(
@@ -82,21 +93,45 @@ const server = createServer(async (req, res) => {
         cors,
       )
     } catch (cause) {
-      return sendJson(
-        res,
-        400,
-        { error: cause instanceof Error ? cause.message : 'Invalid request body.' },
-        cors,
-      )
+      return sendJson(res, 400, errorBody(cause), cors)
     }
   }
 
-  if (req.method === 'POST' && req.url === '/v1/publish') {
+  if (
+    req.method === 'GET' &&
+    requestUrl.pathname === '/v1/platforms/xiaohongshu/status'
+  ) {
+    try {
+      const result = await getXiaohongshuStatus(
+        requestUrl.searchParams.get('account') || 'default',
+      )
+      return sendJson(res, result.ok ? 200 : 409, result, cors)
+    } catch (cause) {
+      return sendJson(res, 500, errorBody(cause), cors)
+    }
+  }
+
+  if (
+    req.method === 'POST' &&
+    requestUrl.pathname === '/v1/platforms/xiaohongshu/login'
+  ) {
+    try {
+      const body = await readJson(req)
+      const result = await loginXiaohongshu(
+        typeof body.account === 'string' ? body.account : 'default',
+      )
+      return sendJson(res, result.ok ? 200 : 409, result, cors)
+    } catch (cause) {
+      return sendJson(res, 500, errorBody(cause), cors)
+    }
+  }
+
+  if (req.method === 'POST' && requestUrl.pathname === '/v1/publish') {
     return sendJson(
       res,
       501,
       {
-        error: 'No local publisher is installed yet. Xiaohongshu is the next adapter.',
+        error: 'Xiaohongshu auth is available; publishing is the next step.',
       },
       cors,
     )
@@ -108,9 +143,11 @@ const server = createServer(async (req, res) => {
 server.listen(port, host, () => {
   console.log('')
   console.log('ButtonPost Local Runner')
-  console.log(`  URL:   http://${host}:${port}`)
-  console.log(`  Token: ${token}`)
-  console.log(`  Allowed origins: ${[...allowedOrigins].join(', ')}`)
+  console.log('  Version: ' + VERSION)
+  console.log('  URL:     http://' + host + ':' + port)
+  console.log('  Token:   ' + token)
+  console.log('  Allowed origins: ' + [...allowedOrigins].join(', '))
+  console.log('  Capabilities: Xiaohongshu auth')
   console.log('')
   console.log('Keep this terminal open while ButtonPost uses local browser publishers.')
   console.log('The token stays on your machine; paste it into ButtonPost only when pairing.')
