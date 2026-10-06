@@ -116,15 +116,34 @@ export function PublisherForm({ platforms }: Props) {
       )
     }
 
-    setMediaProgress('Uploading source images for X / DEV...')
+    setMediaProgress('Preparing media upload...')
 
     try {
+      const ticketResponse = await fetch('/api/media/ticket', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret }),
+      })
+      const ticketData = (await ticketResponse.json().catch(() => ({}))) as {
+        ticket?: string
+        error?: string
+      }
+
+      if (!ticketResponse.ok || !ticketData.ticket) {
+        throw new Error(
+          ticketData.error ||
+            'ButtonPost could not create a temporary media upload ticket.',
+        )
+      }
+
+      setMediaProgress('Uploading source images for X / DEV...')
+
       return await Promise.all(
         images.map(async (image, index) => {
           const blob = await upload(safeUploadName(image, index), image, {
             access: 'public',
             handleUploadUrl: '/api/media/upload',
-            clientPayload: JSON.stringify({ secret }),
+            clientPayload: JSON.stringify({ ticket: ticketData.ticket }),
             multipart: image.size > 4 * 1024 * 1024,
           })
 
