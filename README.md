@@ -10,7 +10,7 @@ The product is intentionally **not** a content-variant generator. Platform adapt
 
 The first runnable slice supports:
 
-- **X** through the official X API, including up to 4 source images per post.
+- **X** through the official X API, including up to 4 source images per first post and automatic reply threads when the source exceeds the single-post limit.
 - **DEV Community** through the official Forem article API, including public source images and a cover image.
 - Parallel publishing with per-platform published / draft / failed / skipped results.
 - A server-side publish key so a deployed personal instance is not an open publishing endpoint.
@@ -44,6 +44,7 @@ X_ACCESS_TOKEN_SECRET=...
 # Alternative OAuth 2.0 user-context token:
 X_USER_ACCESS_TOKEN=
 X_MAX_LENGTH=280
+X_MAX_THREAD_POSTS=25
 DEVTO_API_KEY=...
 DEVTO_TAGS=ai,webdev
 DEVTO_DRAFT_ONLY=false
