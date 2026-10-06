@@ -33,14 +33,19 @@ Open `http://localhost:3000`.
 
 ```bash
 BUTTONPOST_SECRET=your-private-publish-key
-X_USER_ACCESS_TOKEN=...
+X_API_KEY=...
+X_API_SECRET=...
+X_ACCESS_TOKEN=...
+X_ACCESS_TOKEN_SECRET=...
+# Alternative OAuth 2.0 user-context token:
+X_USER_ACCESS_TOKEN=
 X_MAX_LENGTH=280
 DEVTO_API_KEY=...
 DEVTO_TAGS=ai,webdev
 DEVTO_DRAFT_ONLY=false
 ```
 
-`X_USER_ACCESS_TOKEN` must be a user-context token allowed to create posts. `DEVTO_API_KEY` must belong to the DEV author account.
+`X_USER_ACCESS_TOKEN` must be an OAuth 2.0 **user-context** token allowed to create posts; the application-only Bearer Token will be rejected. For the quickest manual test, configure OAuth 1.0a with `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, and `X_ACCESS_TOKEN_SECRET`. `DEVTO_API_KEY` must belong to the DEV author account.
 
 For safe DEV testing, set `DEVTO_DRAFT_ONLY=true` before clicking Publish Everywhere.
 
