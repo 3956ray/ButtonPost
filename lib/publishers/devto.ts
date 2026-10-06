@@ -16,12 +16,15 @@ export function validateForDevto(post: SourcePost): ValidationResult {
 function withImages(post: SourcePost): string {
   if (!post.media?.length) return post.content
 
-  const imageMarkdown = post.media
+  const bodyImages = post.media.slice(1)
+  if (!bodyImages.length) return post.content
+
+  const imageMarkdown = bodyImages
     .map((media, index) => {
-      const alt = (media.name || `Image ${index + 1}`)
+      const alt = (media.name || `Image ${index + 2}`)
         .replace(/[\[\]]/g, '')
         .trim()
-      return `![${alt || `Image ${index + 1}`}](${media.url})`
+      return `![${alt || `Image ${index + 2}`}](${media.url})`
     })
     .join('\n\n')
 
