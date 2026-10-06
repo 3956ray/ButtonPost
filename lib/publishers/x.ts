@@ -100,8 +100,16 @@ async function downloadImage(media: SourceMedia): Promise<{
     throw new Error(`X media must be an image; received ${contentType || 'unknown content type'}.`)
   }
 
+  const buffer = Buffer.from(await response.arrayBuffer())
+  const maxImageBytes = 5 * 1024 * 1024
+  if (buffer.length > maxImageBytes) {
+    throw new Error(
+      `X image ${media.name || media.url} is larger than the 5 MB ButtonPost X image limit.`,
+    )
+  }
+
   return {
-    buffer: Buffer.from(await response.arrayBuffer()),
+    buffer,
     contentType,
   }
 }
