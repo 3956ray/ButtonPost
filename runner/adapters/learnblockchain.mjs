@@ -1,4 +1,4 @@
-import { access, mkdir } from 'node:fs/promises'
+import { access, mkdir, readFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { chromium } from 'patchright'
@@ -763,6 +763,73 @@ async function appendLearnBlockchainImageMarkdown(
   await fillEditorLocator(page, contentLocator, next)
 }
 
+function mimeTypeForImagePath(imagePath) {
+  const extension = path.extname(imagePath).toLowerCase()
+
+  if (extension === '.png') return 'image/png'
+  if (extension === '.gif') return 'image/gif'
+  if (extension === '.webp') return 'image/webp'
+  if (extension === '.jpeg' || extension === '.jpg') return 'image/jpeg'
+  return 'application/octet-stream'
+}
+
+async function uploadLearnBlockchainImageDirect(
+  context,
+  page,
+  imagePath,
+) {
+  const token = await page
+    .locator('meta[name="csrf-token"]')
+    .getAttribute('content')
+    .catch(() => null)
+
+  const buffer = await readFile(imagePath)
+  const response = await context.request.post(
+    new URL('/image/upload', page.url()).toString(),
+    {
+      headers: token ? { 'X-CSRF-TOKEN': token } : undefined,
+      multipart: {
+        file: {
+          name: path.basename(imagePath),
+          mimeType: mimeTypeForImagePath(imagePath),
+          buffer,
+        },
+      },
+      timeout: 30_000,
+    },
+  )
+
+  const body = (await response.text()).trim()
+
+  if (!response.ok() || body === 'error') {
+    return {
+      ok: false,
+      imageUrl: null,
+      error:
+        body && body !== 'error'
+          ? body.slice(0, 240)
+          : 'LearnBlockchain /image/upload rejected the image.',
+    }
+  }
+
+  const imageUrl = extractLearnBlockchainImageUrl(body)
+
+  if (!imageUrl) {
+    return {
+      ok: false,
+      imageUrl: null,
+      error:
+        'LearnBlockchain image upload succeeded but returned no usable image URL.',
+    }
+  }
+
+  return {
+    ok: true,
+    imageUrl,
+    error: null,
+  }
+}
+
 async function rankedLearnBlockchainFileInputs(page) {
   const inputs = page.locator('input[type="file"]')
   const count = await inputs.count()
@@ -947,6 +1014,7 @@ async function tryLearnBlockchainToolbarUpload(
 }
 
 async function uploadLearnBlockchainImages(
+  context,
   page,
   contentLocator,
   imagePaths,
@@ -960,31 +1028,60 @@ async function uploadLearnBlockchainImages(
   const failed = []
 
   for (const imagePath of imagePaths) {
-    let result = await tryLearnBlockchainToolbarUpload(
+    const direct = await uploadLearnBlockchainImageDirect(
+      context,
+      page,
+      imagePath,
+    ).catch((cause) => ({
+      ok: false,
+      imageUrl: null,
+      error:
+        cause instanceof Error
+          ? cause.message
+          : 'Unexpected LearnBlockchain image upload error.',
+    }))
+
+    if (direct.ok && direct.imageUrl) {
+      uploaded += 1
+      await appendLearnBlockchainImageMarkdown(
+        page,
+        contentLocator,
+        imagePath,
+        direct.imageUrl,
+      )
+      inserted += 1
+      continue
+    }
+
+    // Fallback for installations that customize the upstream upload endpoint.
+    let fallback = await tryLearnBlockchainToolbarUpload(
       page,
       contentLocator,
       imagePath,
     )
 
-    if (!result.ok) {
+    if (!fallback.ok) {
       const rankedInputs = await rankedLearnBlockchainFileInputs(page)
 
       for (const candidate of rankedInputs) {
-        result = await tryLearnBlockchainFileInput(
+        fallback = await tryLearnBlockchainFileInput(
           page,
           contentLocator,
           candidate.input,
           imagePath,
         )
-        if (result.ok) break
+        if (fallback.ok) break
       }
     }
 
-    if (result.ok) {
+    if (fallback.ok) {
       uploaded += 1
       inserted += 1
     } else {
-      failed.push(path.basename(imagePath))
+      failed.push(
+        path.basename(imagePath) +
+          (direct.error ? ' (' + direct.error + ')' : ''),
+      )
     }
   }
 
@@ -995,7 +1092,7 @@ async function uploadLearnBlockchainImages(
       failed.length > 0
         ? 'ButtonPost could not insert ' +
           failed.length +
-          ' LearnBlockchain image(s) into the Markdown body: ' +
+          ' LearnBlockchain image(s): ' +
           failed.join(', ') +
           '. Add them manually before publishing.'
         : null,
@@ -1169,6 +1266,7 @@ export async function publishLearnBlockchainArticle({
       await fillEditorLocator(page, editor.content, normalizedContent)
 
       const media = await uploadLearnBlockchainImages(
+        context,
         page,
         editor.content,
         normalizedImages,
