@@ -28,10 +28,10 @@ type ApiResponse = {
   error?: string
 }
 
-type DestinationId = PlatformId | 'xiaohongshu'
+type DestinationId = PlatformId | 'xiaohongshu' | 'jike'
 
 type LocalPublishResult = {
-  platform: 'xiaohongshu'
+  platform: 'xiaohongshu' | 'jike'
   status: 'published' | 'reviewing' | 'failed' | 'skipped'
   externalId?: string
   externalUrl?: string
@@ -54,6 +54,7 @@ type LoopbackRequestInit = RequestInit & {
 const RUNNER_URL_KEY = 'buttonpost.runner.url'
 const RUNNER_TOKEN_KEY = 'buttonpost.runner.token'
 const XHS_ACCOUNT_KEY = 'buttonpost.xiaohongshu.account'
+const JIKE_ACCOUNT_KEY = 'buttonpost.jike.account'
 
 function loopbackInit(init: RequestInit = {}): LoopbackRequestInit {
   return { ...init, targetAddressSpace: 'loopback' }
@@ -62,6 +63,7 @@ function loopbackInit(init: RequestInit = {}): LoopbackRequestInit {
 function platformLabel(id: DisplayPublishResult['platform']) {
   if (id === 'devto') return 'DEV'
   if (id === 'xiaohongshu') return '小红书'
+  if (id === 'jike') return '即刻'
   return 'X'
 }
 
@@ -361,6 +363,88 @@ export function PublisherForm({ platforms }: Props) {
     }
   }
 
+
+  async function publishJike(): Promise<LocalPublishResult> {
+    const unsupportedImage = images.find(
+      (image) => !['image/jpeg', 'image/png'].includes(image.type),
+    )
+
+    if (unsupportedImage) {
+      return {
+        platform: 'jike',
+        status: 'failed',
+        error:
+          'Jike currently accepts JPEG/PNG images in ButtonPost. Unsupported file: ' +
+          unsupportedImage.name,
+      }
+    }
+
+    const runnerUrl = window.localStorage
+      .getItem(RUNNER_URL_KEY)
+      ?.replace(/\/$/, '')
+    const runnerToken = window.localStorage.getItem(RUNNER_TOKEN_KEY)
+    const account = window.localStorage.getItem(JIKE_ACCOUNT_KEY) || 'default'
+
+    if (!runnerUrl || !runnerToken) {
+      return {
+        platform: 'jike',
+        status: 'failed',
+        error: 'Connect the ButtonPost Local Runner before publishing to Jike.',
+      }
+    }
+
+    const form = new FormData()
+    form.append('account', account)
+    form.append('content', markdownToPlainText(content))
+    for (const image of images) form.append('images', image, image.name)
+
+    try {
+      const response = await fetch(
+        runnerUrl + '/v1/platforms/jike/publish-post',
+        loopbackInit({
+          method: 'POST',
+          headers: {
+            Authorization: 'Bearer ' + runnerToken,
+          },
+          body: form,
+          cache: 'no-store',
+        }),
+      )
+      const data = (await response.json().catch(() => ({}))) as LocalRunnerResponse
+
+      if (!response.ok || !data.ok || data.status !== 'published') {
+        return {
+          platform: 'jike',
+          status: 'failed',
+          error:
+            data.error ||
+            data.message ||
+            'The Local Runner could not publish the Jike post.',
+        }
+      }
+
+      return {
+        platform: 'jike',
+        status: 'published',
+        externalId: data.message || 'Published via Local Runner',
+        externalUrl:
+          typeof (data as LocalRunnerResponse & { externalUrl?: string }).externalUrl ===
+          'string'
+            ? (data as LocalRunnerResponse & { externalUrl?: string }).externalUrl
+            : undefined,
+      }
+    } catch (cause) {
+      return {
+        platform: 'jike',
+        status: 'failed',
+        error:
+          cause instanceof Error
+            ? cause.message
+            : 'Could not reach the Local Runner for Jike.',
+      }
+    }
+  }
+
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSubmitting(true)
@@ -386,9 +470,10 @@ export function PublisherForm({ platforms }: Props) {
     })
 
     const serverPlatforms = selected.filter(
-      (id): id is PlatformId => id !== 'xiaohongshu',
+      (id): id is PlatformId => id !== 'xiaohongshu' && id !== 'jike',
     )
     const wantsXiaohongshu = selected.includes('xiaohongshu')
+    const wantsJike = selected.includes('jike')
 
     if (wantsXiaohongshu) {
       const reviewingResult: LocalPublishResult = {
@@ -396,6 +481,17 @@ export function PublisherForm({ platforms }: Props) {
         status: 'reviewing',
         externalId:
           'ButtonPost filled the Xiaohongshu editor. Review it in Chrome and click Publish manually.',
+      }
+      upsertResults([reviewingResult])
+      mergeHistoryResults(historyId, [reviewingResult])
+    }
+
+    if (wantsJike) {
+      const reviewingResult: LocalPublishResult = {
+        platform: 'jike',
+        status: 'reviewing',
+        externalId:
+          'ButtonPost will fill the Jike composer. Review circles, text, and images in Chrome, then click Send manually.',
       }
       upsertResults([reviewingResult])
       mergeHistoryResults(historyId, [reviewingResult])
@@ -417,6 +513,15 @@ export function PublisherForm({ platforms }: Props) {
         publishXiaohongshu().then((xiaohongshuResult) => {
           upsertResults([xiaohongshuResult])
           mergeHistoryResults(historyId, [xiaohongshuResult])
+        }),
+      )
+    }
+
+    if (wantsJike) {
+      tasks.push(
+        publishJike().then((jikeResult) => {
+          upsertResults([jikeResult])
+          mergeHistoryResults(historyId, [jikeResult])
         }),
       )
     }
@@ -487,7 +592,7 @@ export function PublisherForm({ platforms }: Props) {
             onChange={onImagesChange}
           />
           <p className="helper">
-            One source image set. X attaches up to 4 images, DEV stores the images in the article, and Xiaohongshu sends them directly to your Local Runner. Up to 9 source images are accepted.
+            One source image set. X attaches up to 4 images, DEV stores them in the article, and Xiaohongshu/Jike send them directly to your Local Runner. Up to 9 source images are accepted.
           </p>
           {mediaProgress ? <p className="media-progress">{mediaProgress}</p> : null}
           {images.length > 0 ? (
@@ -537,6 +642,21 @@ export function PublisherForm({ platforms }: Props) {
               <span className="platform-note">Local Runner · review before publish</span>
             </span>
           </label>
+
+          <label className="platform">
+            <input
+              type="checkbox"
+              checked={selected.includes('jike')}
+              onChange={() => togglePlatform('jike')}
+            />
+            <span className="platform-copy">
+              <span className="platform-name">
+                <span className="dot local" />
+                Jike · 即刻
+              </span>
+              <span className="platform-note">Local Runner · review before send</span>
+            </span>
+          </label>
         </div>
 
         <div className="secret-wrap">
@@ -551,7 +671,7 @@ export function PublisherForm({ platforms }: Props) {
             placeholder="BUTTONPOST_SECRET"
           />
           <p className="helper">
-            Used for X / DEV publishing and server media uploads. Xiaohongshu media goes only to your Local Runner.
+            Used for X / DEV publishing and server media uploads. Xiaohongshu and Jike media go only to your Local Runner.
           </p>
         </div>
 
