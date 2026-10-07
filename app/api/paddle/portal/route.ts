@@ -57,13 +57,13 @@ export async function POST() {
   }
 
   const response = await fetch(
-    \`\${paddleApiBase()}/customers/\${encodeURIComponent(
+    `${paddleApiBase()}/customers/${encodeURIComponent(
       subscription.paddle_customer_id,
-    )}/portal-sessions\`,
+    )}/portal-sessions`,
     {
       method: 'POST',
       headers: {
-        Authorization: \`Bearer \${apiKey}\`,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         Accept: 'application/json',
       },

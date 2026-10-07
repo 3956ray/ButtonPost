@@ -64,7 +64,7 @@ export function BillingPanel({
           displayMode: 'overlay',
           variant: 'one-page',
           theme: 'light',
-          successUrl: \`\${window.location.origin}/settings/billing?checkout=success\`,
+          successUrl: `${window.location.origin}/settings/billing?checkout=success`,
         },
       })
     } catch (cause) {
@@ -140,7 +140,7 @@ export function BillingPanel({
               Your Paddle subscription is{' '}
               <strong>{subscriptionStatus || 'active'}</strong>.
               {periodLabel
-                ? \` Current billing period ends \${periodLabel}.\`
+                ? ` Current billing period ends ${periodLabel}.`
                 : ''}
               {cancelAtPeriodEnd
                 ? ' Cancellation is scheduled for the end of the billing period.'
