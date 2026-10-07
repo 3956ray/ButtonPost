@@ -219,3 +219,19 @@ ButtonPost now:
 2. otherwise focuses CodeMirror's internal textarea and inserts the complete Markdown through keyboard input;
 3. never calls Playwright `fill()` on the outer CodeMirror `div`;
 4. verifies that rendered editor content is non-empty before entering review mode.
+
+
+### LearnBlockchain body images
+
+Runner v0.7.2 stops treating the first generic file input as proof that an article image was inserted.
+
+For every selected source image ButtonPost now:
+
+1. targets an explicit editor upload action when the page exposes one;
+2. otherwise ranks available file inputs and avoids likely cover/avatar inputs;
+3. watches the page's upload responses for a persistent `img.learnblockchain.cn` URL;
+4. checks whether LearnBlockchain inserted a Markdown/HTML image reference itself;
+5. if the upload succeeded but the editor did not insert the reference, appends the Markdown image reference to the article body mechanically;
+6. warns during review if an image could not be inserted, without auto-publishing.
+
+This keeps the final article portable and avoids reporting an image as successful merely because `setInputFiles()` returned without throwing.
