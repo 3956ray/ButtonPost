@@ -6,13 +6,22 @@ import { createClient } from '@/lib/supabase/server'
 
 export default async function LoginPage() {
   const configured = Boolean(getSupabasePublicConfig())
+  let signedIn = false
 
   if (configured) {
     try {
       const supabase = await createClient()
-      const { data } = await supabase.auth.getClaims()
-      if (data?.claims) redirect('/')
-    } catch {}
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      signedIn = Boolean(user)
+    } catch {
+      signedIn = false
+    }
+  }
+
+  if (signedIn) {
+    redirect('/')
   }
 
   return (
