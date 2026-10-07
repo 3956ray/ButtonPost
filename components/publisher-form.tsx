@@ -519,6 +519,12 @@ export function PublisherForm({ platforms }: Props) {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+
+    if (!secret.trim()) {
+      setError('Publish key is required before any publish action.')
+      return
+    }
+
     setSubmitting(true)
     setError('')
     setResults([])
@@ -780,9 +786,10 @@ export function PublisherForm({ platforms }: Props) {
             onChange={(event) => setSecret(event.target.value)}
             autoComplete="off"
             placeholder="BUTTONPOST_SECRET"
+            required
           />
           <p className="helper">
-            Used for X / DEV publishing and server media uploads. Xiaohongshu, Jike, and LearnBlockchain local-browser media go only to your Local Runner.
+            Required before any publish action. It authorizes the ButtonPost publish UI; X / DEV and server media use it server-side. Local Runner platforms do not receive this key.
           </p>
         </div>
 
@@ -799,7 +806,8 @@ export function PublisherForm({ platforms }: Props) {
             submitting ||
             selected.length === 0 ||
             !title.trim() ||
-            !content.trim()
+            !content.trim() ||
+            !secret.trim()
           }
         >
           {submitting ? 'Publishing…' : 'Publish everywhere (' + selected.length + ')'}
