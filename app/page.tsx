@@ -12,12 +12,13 @@ async function getAuthState() {
 
   try {
     const supabase = await createClient()
-    const { data } = await supabase.auth.getClaims()
-    const claims = data?.claims as { email?: unknown } | undefined
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
     return {
       configured: true,
-      email: typeof claims?.email === 'string' ? claims.email : null,
+      email: user?.email ?? null,
     }
   } catch {
     return { configured: true, email: null as string | null }
