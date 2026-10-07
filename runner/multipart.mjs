@@ -132,3 +132,12 @@ export function readJikePostMultipart(req) {
     allowedImageTypes: ['image/jpeg', 'image/png'],
   })
 }
+
+
+export function readLearnBlockchainArticleMultipart(req) {
+  return readImagePostMultipart(req, {
+    platformLabel: 'LearnBlockchain article',
+    tempPrefix: 'buttonpost-lbc-',
+    requireImages: false,
+  })
+}
