@@ -15,7 +15,7 @@ The first runnable slice supports:
 - Parallel publishing with per-platform published / draft / failed / skipped results.
 - A server-side publish key so a deployed personal instance is not an open publishing endpoint.
 
-Phase 2 adds a **Local Runner** so browser-automated platforms can execute on the user's own computer without sending browser cookies to Vercel. Xiaohongshu login/check and image-note publishing now run locally through the user's own Chrome session.
+Phase 2/3 add a **Local Runner** so browser-automated platforms can execute on the user's own computer without sending browser cookies to Vercel. Xiaohongshu and Jike now use local Chrome sessions with review-before-publish flows.
 
 ## Local setup
 
@@ -80,7 +80,7 @@ One source post + source images
       |             |
       v             v
  Server API      Local Runner
- X / DEV        Xiaohongshu
+ X / DEV        Xiaohongshu / Jike
       \             /
        per-platform results
 ```
