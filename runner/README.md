@@ -43,6 +43,8 @@ BUTTONPOST_RUNNER_TOKEN=choose-a-stable-local-token
 BUTTONPOST_ALLOWED_ORIGINS=https://buttonpost.vercel.app,http://localhost:3000
 # Optional. Default is false so publishing is visible.
 BUTTONPOST_XHS_HEADLESS=false
+# GitHub OAuth for LearnBlockchain can require multi-page/mobile verification.
+BUTTONPOST_LBC_LOGIN_TIMEOUT_MINUTES=15
 # Default false: fill the editor, then wait for you to review and click Publish.
 BUTTONPOST_XHS_AUTO_PUBLISH=false
 # Manual review window before ButtonPost gives up waiting.
@@ -164,3 +166,16 @@ In ButtonPost Web:
 6. later use **Check login** to validate the saved session.
 
 No article is created or published in this step. Once the login lifecycle is verified against the user's real account, the next increment will open the site's Markdown article editor, fill the source title/body, preserve review controls such as category/tags, and wait for manual publish.
+
+
+### LearnBlockchain GitHub OAuth
+
+LearnBlockchain's GitHub sign-in can navigate through or replace several browser pages and may pause for mobile/device verification. Runner v0.6.1+ tracks the entire persistent Chrome context rather than a single original page:
+
+- GitHub OAuth tabs/windows are kept alive during verification;
+- closing/replacing the initial LearnBlockchain page no longer cancels the login;
+- OAuth pages are never treated as proof of LearnBlockchain authentication;
+- login succeeds only after a page returns to `learnblockchain.cn` and a signed-in UI marker is visible;
+- after confirmation, ButtonPost waits briefly for cookies/session storage to settle before closing Chrome.
+
+The default login window is 15 minutes and can be changed with `BUTTONPOST_LBC_LOGIN_TIMEOUT_MINUTES`.
