@@ -86,7 +86,6 @@ export async function POST(request: Request) {
     const admin = createAdminClient()
 
     const { data: existing, error: existingError } = await admin
-      .schema('private')
       .from('paddle_webhook_events')
       .select('event_id')
       .eq('event_id', event.eventId)
@@ -108,7 +107,6 @@ export async function POST(request: Request) {
     }
 
     const { error: auditError } = await admin
-      .schema('private')
       .from('paddle_webhook_events')
       .insert({
         event_id: event.eventId,
