@@ -363,7 +363,7 @@ async function uploadJikeImages(form, imagePaths) {
   }
 }
 
-function extractJikePostId(body) {
+export function extractJikePostId(body) {
   if (!body || typeof body !== 'object') return null
 
   for (const candidate of [
