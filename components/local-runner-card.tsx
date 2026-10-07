@@ -15,6 +15,7 @@ type PlatformState = 'unknown' | 'checking' | 'login' | 'connected' | 'disconnec
 type HealthResponse = {
   ok?: boolean
   version?: string
+  capabilities?: string[]
 }
 
 type EchoResponse = {
@@ -64,6 +65,7 @@ export function LocalRunnerCard() {
   const [state, setState] = useState<RunnerState>('idle')
   const [message, setMessage] = useState('Not connected')
   const [version, setVersion] = useState('')
+  const [capabilities, setCapabilities] = useState<string[]>([])
 
   const [xhsAccount, setXhsAccount] = useState('default')
   const [xhsState, setXhsState] = useState<PlatformState>('unknown')
@@ -124,6 +126,7 @@ export function LocalRunnerCard() {
     setState('checking')
     setMessage('Checking local runner...')
     setVersion('')
+    setCapabilities([])
 
     const url = runnerUrl.trim().replace(/\/$/, '')
     const token = runnerToken.trim()
@@ -165,6 +168,9 @@ export function LocalRunnerCard() {
       setRunnerUrl(url)
       setRunnerToken(token)
       setVersion(health.version || '')
+      setCapabilities(
+        Array.isArray(health.capabilities) ? health.capabilities : [],
+      )
       setState('connected')
       setMessage('Connected. Local browser publishers are available.')
       void checkXiaohongshu(url, token, xhsAccount)
@@ -228,6 +234,7 @@ export function LocalRunnerCard() {
     setRunnerToken('')
     setState('idle')
     setVersion('')
+    setCapabilities([])
     setMessage('Not connected')
     setXhsState('unknown')
     setXhsMessage('Connect the runner, then check your Xiaohongshu login.')
@@ -362,12 +369,16 @@ export function LocalRunnerCard() {
         runnerUrl={runnerUrl}
         runnerToken={runnerToken}
         runnerConnected={state === 'connected'}
+        runnerSupported={capabilities.includes('jike:auth')}
+        runnerVersion={version}
       />
 
       <LearnBlockchainRunnerCard
         runnerUrl={runnerUrl}
         runnerToken={runnerToken}
         runnerConnected={state === 'connected'}
+        runnerSupported={capabilities.includes('learnblockchain:auth')}
+        runnerVersion={version}
       />
     </section>
   )
