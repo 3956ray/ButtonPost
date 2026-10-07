@@ -15,6 +15,9 @@ Phase 2 starts with a deliberately small contract:
 - `GET /v1/platforms/learnblockchain/status` — validate a locally stored LearnBlockchain login.
 - `POST /v1/platforms/learnblockchain/login` — open 登链社区 in local Chrome and wait for interactive login.
 - `POST /v1/platforms/learnblockchain/publish-article` — open the signed-in article editor, fill title/Markdown/images when detected, then wait for manual publish.
+- `GET /v1/platforms/indiehackers/status` — validate the saved Indie Hackers session through the protected new-post editor.
+- `POST /v1/platforms/indiehackers/login` — open Indie Hackers sign-in locally and wait for authenticated `/post/new` access.
+- `POST /v1/platforms/indiehackers/publish-post` — fill the new-post editor and wait for the user to submit manually.
 - `POST /v1/publish` — reserved for future generic local routing.
 
 ## Start
@@ -253,3 +256,41 @@ The returned persistent image URL is then appended mechanically to the Markdown 
 ```
 
 ButtonPost accepts both the newer CDN-style `img.learnblockchain.cn/...` response and the Tipask-compatible `/image/show/...` response. The existing toolbar/file-input automation remains only as a fallback for customized installations.
+
+
+## Indie Hackers authentication and publishing
+
+Runner v0.8.0 adds Indie Hackers as a Local Runner destination.
+
+The browser profile is stored at:
+
+```text
+~/.buttonpost/profiles/indiehackers/<account-name>
+```
+
+Authentication is validated by access to the protected new-post editor at:
+
+```text
+https://www.indiehackers.com/post/new
+```
+
+The user enters Indie Hackers credentials directly on `indiehackers.com`; ButtonPost does not read or persist the password.
+
+For publishing, ButtonPost:
+
+1. verifies the saved Indie Hackers session;
+2. opens the protected new-post editor;
+3. discovers the visible title/body controls rather than depending on one hard-coded selector;
+4. fills the same source title/body mechanically;
+5. if the current editor exposes an image file input, attempts local image upload and otherwise leaves an explicit manual-review warning;
+6. leaves group/topic/community context, links, formatting, images, and final submission to the user;
+7. waits for the user to click the final **Post / Publish** action;
+8. confirms success when the browser leaves `/post/new` for an Indie Hackers `/post/...` URL and returns that URL to Publication History.
+
+The review timeout defaults to 30 minutes and can be changed with:
+
+```bash
+BUTTONPOST_IH_REVIEW_TIMEOUT_MINUTES=30
+```
+
+This MVP intentionally does not perform unattended community posting.

@@ -21,6 +21,7 @@ function platformLabel(platform: PublicationHistoryResult['platform']) {
   if (platform === 'xiaohongshu') return '小红书'
   if (platform === 'jike') return '即刻'
   if (platform === 'learnblockchain') return '登链社区'
+  if (platform === 'indiehackers') return 'Indie Hackers'
   return 'X'
 }
 

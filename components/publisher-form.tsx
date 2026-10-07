@@ -28,10 +28,10 @@ type ApiResponse = {
   error?: string
 }
 
-type DestinationId = PlatformId | 'xiaohongshu' | 'jike' | 'learnblockchain'
+type DestinationId = PlatformId | 'xiaohongshu' | 'jike' | 'learnblockchain' | 'indiehackers'
 
 type LocalPublishResult = {
-  platform: 'xiaohongshu' | 'jike' | 'learnblockchain'
+  platform: 'xiaohongshu' | 'jike' | 'learnblockchain' | 'indiehackers'
   status: 'published' | 'reviewing' | 'failed' | 'skipped'
   externalId?: string
   externalUrl?: string
@@ -58,6 +58,7 @@ const RUNNER_TOKEN_KEY = 'buttonpost.runner.token'
 const XHS_ACCOUNT_KEY = 'buttonpost.xiaohongshu.account'
 const JIKE_ACCOUNT_KEY = 'buttonpost.jike.account'
 const LEARNBLOCKCHAIN_ACCOUNT_KEY = 'buttonpost.learnblockchain.account'
+const INDIE_HACKERS_ACCOUNT_KEY = 'buttonpost.indiehackers.account'
 
 function loopbackInit(init: RequestInit = {}): LoopbackRequestInit {
   return { ...init, targetAddressSpace: 'loopback' }
@@ -68,6 +69,7 @@ function platformLabel(id: DisplayPublishResult['platform']) {
   if (id === 'xiaohongshu') return '小红书'
   if (id === 'jike') return '即刻'
   if (id === 'learnblockchain') return '登链社区'
+  if (id === 'indiehackers') return 'Indie Hackers'
   return 'X'
 }
 
@@ -517,6 +519,74 @@ export function PublisherForm({ platforms }: Props) {
     }
   }
 
+
+  async function publishIndieHackers(): Promise<LocalPublishResult> {
+    const runnerUrl = window.localStorage
+      .getItem(RUNNER_URL_KEY)
+      ?.replace(/\/$/, '')
+    const runnerToken = window.localStorage.getItem(RUNNER_TOKEN_KEY)
+    const account =
+      window.localStorage.getItem(INDIE_HACKERS_ACCOUNT_KEY) || 'default'
+
+    if (!runnerUrl || !runnerToken) {
+      return {
+        platform: 'indiehackers',
+        status: 'failed',
+        error:
+          'Connect the ButtonPost Local Runner before publishing to Indie Hackers.',
+      }
+    }
+
+    const form = new FormData()
+    form.append('account', account)
+    form.append('title', title.trim())
+    form.append('content', content)
+    for (const image of images) form.append('images', image, image.name)
+
+    try {
+      const response = await fetch(
+        runnerUrl + '/v1/platforms/indiehackers/publish-post',
+        loopbackInit({
+          method: 'POST',
+          headers: {
+            Authorization: 'Bearer ' + runnerToken,
+          },
+          body: form,
+          cache: 'no-store',
+        }),
+      )
+      const data = (await response.json().catch(() => ({}))) as LocalRunnerResponse
+
+      if (!response.ok || !data.ok || data.status !== 'published') {
+        return {
+          platform: 'indiehackers',
+          status: 'failed',
+          error:
+            data.error ||
+            data.message ||
+            'The Local Runner could not publish the Indie Hackers post.',
+        }
+      }
+
+      return {
+        platform: 'indiehackers',
+        status: 'published',
+        externalId:
+          data.externalId || data.message || 'Published via Local Runner',
+        externalUrl: data.externalUrl,
+      }
+    } catch (cause) {
+      return {
+        platform: 'indiehackers',
+        status: 'failed',
+        error:
+          cause instanceof Error
+            ? cause.message
+            : 'Could not reach the Local Runner for Indie Hackers.',
+      }
+    }
+  }
+
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
@@ -551,11 +621,13 @@ export function PublisherForm({ platforms }: Props) {
       (id): id is PlatformId =>
         id !== 'xiaohongshu' &&
         id !== 'jike' &&
-        id !== 'learnblockchain',
+        id !== 'learnblockchain' &&
+        id !== 'indiehackers',
     )
     const wantsXiaohongshu = selected.includes('xiaohongshu')
     const wantsJike = selected.includes('jike')
     const wantsLearnBlockchain = selected.includes('learnblockchain')
+    const wantsIndieHackers = selected.includes('indiehackers')
 
     if (wantsXiaohongshu) {
       const reviewingResult: LocalPublishResult = {
@@ -585,6 +657,17 @@ export function PublisherForm({ platforms }: Props) {
         status: 'reviewing',
         externalId:
           'ButtonPost will open the LearnBlockchain article editor and fill the title, Markdown body, and detected image uploader. Review type, category, tags, cover, visibility, formatting, and images before publishing manually.',
+      }
+      upsertResults([reviewingResult])
+      mergeHistoryResults(historyId, [reviewingResult])
+    }
+
+    if (wantsIndieHackers) {
+      const reviewingResult: LocalPublishResult = {
+        platform: 'indiehackers',
+        status: 'reviewing',
+        externalId:
+          'ButtonPost will fill the Indie Hackers new-post editor. Review title/body, community context, links, images, and formatting before clicking Post manually.',
       }
       upsertResults([reviewingResult])
       mergeHistoryResults(historyId, [reviewingResult])
@@ -624,6 +707,15 @@ export function PublisherForm({ platforms }: Props) {
         publishLearnBlockchain().then((learnBlockchainResult) => {
           upsertResults([learnBlockchainResult])
           mergeHistoryResults(historyId, [learnBlockchainResult])
+        }),
+      )
+    }
+
+    if (wantsIndieHackers) {
+      tasks.push(
+        publishIndieHackers().then((indieHackersResult) => {
+          upsertResults([indieHackersResult])
+          mergeHistoryResults(historyId, [indieHackersResult])
         }),
       )
     }
@@ -694,7 +786,7 @@ export function PublisherForm({ platforms }: Props) {
             onChange={onImagesChange}
           />
           <p className="helper">
-            One source image set. X attaches up to 4 images, DEV stores them in the article, and Xiaohongshu/Jike/LearnBlockchain send local files directly to your Local Runner. Up to 9 source images are accepted.
+            One source image set. X attaches up to 4 images, DEV stores them in the article, and Xiaohongshu/Jike/LearnBlockchain/Indie Hackers send local files directly to your Local Runner. Up to 9 source images are accepted.
           </p>
           {mediaProgress ? <p className="media-progress">{mediaProgress}</p> : null}
           {images.length > 0 ? (
@@ -772,6 +864,21 @@ export function PublisherForm({ platforms }: Props) {
                 LearnBlockchain · 登链社区
               </span>
               <span className="platform-note">Local Runner · article review before publish</span>
+            </span>
+          </label>
+
+          <label className="platform">
+            <input
+              type="checkbox"
+              checked={selected.includes('indiehackers')}
+              onChange={() => togglePlatform('indiehackers')}
+            />
+            <span className="platform-copy">
+              <span className="platform-name">
+                <span className="dot local" />
+                Indie Hackers
+              </span>
+              <span className="platform-note">Local Runner · review before post</span>
             </span>
           </label>
         </div>
