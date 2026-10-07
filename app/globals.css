@@ -617,3 +617,113 @@ button, input, textarea { font: inherit; }
     grid-template-columns: 64px 72px minmax(0, 1fr);
   }
 }
+
+
+/* Phase 6A · authentication */
+.brand-row { justify-content: space-between; }
+.brand-lockup,
+.auth-nav,
+.auth-form { display: flex; align-items: center; }
+.brand-lockup { gap: 10px; }
+.auth-form { gap: 10px; min-width: 0; }
+.auth-email {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 11px;
+}
+.auth-chip,
+.auth-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 254, 250, .76);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+  text-decoration: none;
+}
+.auth-link {
+  color: var(--text);
+  transition: border-color .16s ease, transform .16s ease, background .16s ease;
+}
+.auth-link:hover {
+  border-color: #a6a39a;
+  background: white;
+  transform: translateY(-1px);
+}
+.auth-button {
+  appearance: none;
+  cursor: pointer;
+}
+.auth-shell {
+  width: min(520px, calc(100% - 32px));
+  min-height: 100vh;
+  margin: 0 auto;
+  display: grid;
+  align-items: center;
+  padding: 36px 0;
+}
+.auth-card {
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 18px 50px rgba(24, 23, 18, .06);
+}
+.auth-card h1 {
+  margin: 18px 0 8px;
+  font-size: clamp(34px, 7vw, 48px);
+  line-height: 1;
+  letter-spacing: -.045em;
+}
+.auth-card > p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.auth-home {
+  display: inline-flex;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+  text-decoration: none;
+}
+.auth-provider-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 24px;
+}
+.auth-provider {
+  width: 100%;
+  padding: 13px 15px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: white;
+  color: var(--text);
+  font-weight: 800;
+  cursor: pointer;
+}
+.auth-provider:hover:not(:disabled) { border-color: #a6a39a; }
+.auth-provider:disabled { opacity: .5; cursor: wait; }
+.auth-error {
+  margin: 12px 0 0;
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.auth-note {
+  margin-top: 18px !important;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+}
+@media (max-width: 760px) {
+  .auth-email { display: none; }
+  .auth-card { padding: 22px; }
+}
