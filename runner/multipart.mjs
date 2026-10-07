@@ -141,3 +141,12 @@ export function readLearnBlockchainArticleMultipart(req) {
     requireImages: false,
   })
 }
+
+
+export function readIndieHackersPostMultipart(req) {
+  return readImagePostMultipart(req, {
+    platformLabel: 'Indie Hackers',
+    tempPrefix: 'buttonpost-ih-',
+    requireImages: false,
+  })
+}
