@@ -59,6 +59,8 @@ const XHS_ACCOUNT_KEY = 'buttonpost.xiaohongshu.account'
 const JIKE_ACCOUNT_KEY = 'buttonpost.jike.account'
 const LEARNBLOCKCHAIN_ACCOUNT_KEY = 'buttonpost.learnblockchain.account'
 const INDIE_HACKERS_ACCOUNT_KEY = 'buttonpost.indiehackers.account'
+const ACTIVE_LOCAL_DESTINATIONS = ['xiaohongshu', 'jike', 'learnblockchain'] as const
+const ACTIVE_DESTINATION_SET = new Set<DestinationId>(ACTIVE_LOCAL_DESTINATIONS)
 
 function loopbackInit(init: RequestInit = {}): LoopbackRequestInit {
   return { ...init, targetAddressSpace: 'loopback' }
@@ -83,9 +85,10 @@ export function PublisherForm({ platforms }: Props) {
   const [content, setContent] = useState('')
   const [images, setImages] = useState<File[]>([])
   const [secret, setSecret] = useState('')
-  const [selected, setSelected] = useState<DestinationId[]>(
-    platforms.map((platform) => platform.id),
-  )
+  const [selected, setSelected] = useState<DestinationId[]>(() => [
+    ...platforms.map((platform) => platform.id),
+    ...ACTIVE_LOCAL_DESTINATIONS,
+  ])
   const [results, setResults] = useState<DisplayPublishResult[]>([])
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -137,7 +140,15 @@ export function PublisherForm({ platforms }: Props) {
   function reuseHistoryEntry(entry: PublicationHistoryEntry) {
     setTitle(entry.title)
     setContent(entry.content)
-    setSelected([...entry.selected])
+    const serverPlatformIds = new Set<DestinationId>(
+      platforms.map((platform) => platform.id),
+    )
+    setSelected(
+      entry.selected.filter(
+        (platform) =>
+          serverPlatformIds.has(platform) || ACTIVE_DESTINATION_SET.has(platform),
+      ),
+    )
     setImages([])
     setImageInputKey((value) => value + 1)
     setResults([])
@@ -627,51 +638,6 @@ export function PublisherForm({ platforms }: Props) {
     const wantsXiaohongshu = selected.includes('xiaohongshu')
     const wantsJike = selected.includes('jike')
     const wantsLearnBlockchain = selected.includes('learnblockchain')
-    const wantsIndieHackers = selected.includes('indiehackers')
-
-    if (wantsXiaohongshu) {
-      const reviewingResult: LocalPublishResult = {
-        platform: 'xiaohongshu',
-        status: 'reviewing',
-        externalId:
-          'ButtonPost filled the Xiaohongshu editor. Review it in Chrome and click Publish manually.',
-      }
-      upsertResults([reviewingResult])
-      mergeHistoryResults(historyId, [reviewingResult])
-    }
-
-    if (wantsJike) {
-      const reviewingResult: LocalPublishResult = {
-        platform: 'jike',
-        status: 'reviewing',
-        externalId:
-          'ButtonPost will fill the Jike composer. Review circles, text, and images in Chrome, then click Send manually.',
-      }
-      upsertResults([reviewingResult])
-      mergeHistoryResults(historyId, [reviewingResult])
-    }
-
-    if (wantsLearnBlockchain) {
-      const reviewingResult: LocalPublishResult = {
-        platform: 'learnblockchain',
-        status: 'reviewing',
-        externalId:
-          'ButtonPost will open the LearnBlockchain article editor and fill the title, Markdown body, and detected image uploader. Review type, category, tags, cover, visibility, formatting, and images before publishing manually.',
-      }
-      upsertResults([reviewingResult])
-      mergeHistoryResults(historyId, [reviewingResult])
-    }
-
-    if (wantsIndieHackers) {
-      const reviewingResult: LocalPublishResult = {
-        platform: 'indiehackers',
-        status: 'reviewing',
-        externalId:
-          'ButtonPost will fill the Indie Hackers new-post editor. Review title/body, community context, links, images, and formatting before clicking Post manually.',
-      }
-      upsertResults([reviewingResult])
-      mergeHistoryResults(historyId, [reviewingResult])
-    }
 
     const tasks: Promise<void>[] = []
 
@@ -684,41 +650,56 @@ export function PublisherForm({ platforms }: Props) {
       )
     }
 
-    if (wantsXiaohongshu) {
-      tasks.push(
-        publishXiaohongshu().then((xiaohongshuResult) => {
-          upsertResults([xiaohongshuResult])
-          mergeHistoryResults(historyId, [xiaohongshuResult])
-        }),
-      )
-    }
+    tasks.push(
+      (async () => {
+        const localQueue: Array<{
+          platform: LocalPublishResult['platform']
+          message: string
+          run: () => Promise<LocalPublishResult>
+        }> = []
 
-    if (wantsJike) {
-      tasks.push(
-        publishJike().then((jikeResult) => {
-          upsertResults([jikeResult])
-          mergeHistoryResults(historyId, [jikeResult])
-        }),
-      )
-    }
+        if (wantsXiaohongshu) {
+          localQueue.push({
+            platform: 'xiaohongshu',
+            message:
+              'ButtonPost is opening Xiaohongshu. Review the filled editor in Chrome and click Publish manually.',
+            run: publishXiaohongshu,
+          })
+        }
 
-    if (wantsLearnBlockchain) {
-      tasks.push(
-        publishLearnBlockchain().then((learnBlockchainResult) => {
-          upsertResults([learnBlockchainResult])
-          mergeHistoryResults(historyId, [learnBlockchainResult])
-        }),
-      )
-    }
+        if (wantsJike) {
+          localQueue.push({
+            platform: 'jike',
+            message:
+              'ButtonPost is opening Jike. Review circles, text, and images in Chrome, then click Send manually.',
+            run: publishJike,
+          })
+        }
 
-    if (wantsIndieHackers) {
-      tasks.push(
-        publishIndieHackers().then((indieHackersResult) => {
-          upsertResults([indieHackersResult])
-          mergeHistoryResults(historyId, [indieHackersResult])
-        }),
-      )
-    }
+        if (wantsLearnBlockchain) {
+          localQueue.push({
+            platform: 'learnblockchain',
+            message:
+              'ButtonPost is opening LearnBlockchain. Review category, tags, cover, formatting, and images before publishing manually.',
+            run: publishLearnBlockchain,
+          })
+        }
+
+        for (const item of localQueue) {
+          const reviewingResult: LocalPublishResult = {
+            platform: item.platform,
+            status: 'reviewing',
+            externalId: item.message,
+          }
+          upsertResults([reviewingResult])
+          mergeHistoryResults(historyId, [reviewingResult])
+
+          const result = await item.run()
+          upsertResults([result])
+          mergeHistoryResults(historyId, [result])
+        }
+      })(),
+    )
 
     try {
       await Promise.all(tasks)
@@ -786,7 +767,7 @@ export function PublisherForm({ platforms }: Props) {
             onChange={onImagesChange}
           />
           <p className="helper">
-            One source image set. X attaches up to 4 images, DEV stores them in the article, and Xiaohongshu/Jike/LearnBlockchain/Indie Hackers send local files directly to your Local Runner. Up to 9 source images are accepted.
+            One source image set. X attaches up to 4 images, DEV stores them in the article, and Xiaohongshu/Jike/LearnBlockchain send local files directly to your Local Runner. Up to 9 source images are accepted.
           </p>
           {mediaProgress ? <p className="media-progress">{mediaProgress}</p> : null}
           {images.length > 0 ? (
@@ -867,20 +848,6 @@ export function PublisherForm({ platforms }: Props) {
             </span>
           </label>
 
-          <label className="platform">
-            <input
-              type="checkbox"
-              checked={selected.includes('indiehackers')}
-              onChange={() => togglePlatform('indiehackers')}
-            />
-            <span className="platform-copy">
-              <span className="platform-name">
-                <span className="dot local" />
-                Indie Hackers
-              </span>
-              <span className="platform-note">Local Runner · review before post</span>
-            </span>
-          </label>
         </div>
 
         <div className="secret-wrap">
