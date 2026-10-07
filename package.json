@@ -18,6 +18,10 @@
     "runner:test": "node --test runner/lib.test.mjs runner/adapters/xiaohongshu.test.mjs runner/adapters/jike.test.mjs runner/adapters/learnblockchain.test.mjs runner/adapters/indiehackers.test.mjs"
   },
   "dependencies": {
+    "@paddle/paddle-js": "1.6.5",
+    "@paddle/paddle-node-sdk": "3.10.0",
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.117.2",
     "next": "16.3.8",
     "react": "19.3.0",
     "react-dom": "19.3.0",
