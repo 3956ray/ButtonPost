@@ -363,6 +363,80 @@ async function uploadJikeImages(form, imagePaths) {
   }
 }
 
+function extractJikePostId(body) {
+  if (!body || typeof body !== 'object') return null
+
+  for (const candidate of [
+    body.id,
+    body.data?.id,
+    body.post?.id,
+    body.data?.post?.id,
+  ]) {
+    if (typeof candidate === 'string' && candidate.trim()) return candidate.trim()
+  }
+
+  return null
+}
+
+async function waitForJikeCreateResponse(page, timeoutMs) {
+  try {
+    const response = await page.waitForResponse(
+      (candidate) => {
+        try {
+          const request = candidate.request()
+          const url = new URL(candidate.url())
+
+          return (
+            request.method() === 'POST' &&
+            url.hostname === 'api.ruguoapp.com' &&
+            url.pathname.endsWith('/1.0/originalPosts/create')
+          )
+        } catch {
+          return false
+        }
+      },
+      { timeout: timeoutMs },
+    )
+
+    let body = null
+    try {
+      body = await response.json()
+    } catch {
+      // A successful HTTP create response is sufficient even if its body changes.
+    }
+
+    if (!response.ok() || body?.success === false) {
+      const detail =
+        body?.message ||
+        body?.error ||
+        body?.toast ||
+        'Jike create-post request was rejected.'
+
+      return {
+        ok: false,
+        status: 'failed',
+        message: String(detail),
+      }
+    }
+
+    const postId = extractJikePostId(body)
+
+    return {
+      ok: true,
+      status: 'published',
+      message: 'Jike confirmed the post through originalPosts/create.',
+      ...(postId
+        ? {
+            externalId: postId,
+            externalUrl: `https://web.okjike.com/originalPost/${postId}`,
+          }
+        : {}),
+    }
+  } catch {
+    return null
+  }
+}
+
 async function waitForJikeManualPublish(page, sourceText, timeoutMs) {
   const snippet = sourceText.replace(/\s+/g, ' ').trim().slice(0, 24)
   const deadline = Date.now() + timeoutMs
@@ -384,6 +458,17 @@ async function waitForJikeManualPublish(page, sourceText, timeoutMs) {
     ).trim()
 
     if (!editorText) {
+      // The composer clears immediately after a successful Send, while the new
+      // feed card can render later. Refresh once before doing the content check.
+      await sleep(1_500)
+      await page
+        .goto(JIKE_COMPOSE_URL, {
+          waitUntil: 'domcontentloaded',
+          timeout: 30_000,
+        })
+        .catch(() => {})
+      await sleep(1_500)
+
       const appeared =
         snippet.length < 8
           ? true
@@ -431,7 +516,7 @@ async function waitForJikeManualPublish(page, sourceText, timeoutMs) {
         return {
           ok: true,
           status: 'published',
-          message: 'Jike post published after manual review.',
+          message: 'Jike post confirmed after refreshing the following feed.',
           ...(externalUrl ? { externalUrl } : {}),
         }
       }
@@ -528,11 +613,17 @@ export async function publishJikePost({
       console.log('  Waiting up to ' + Math.round(timeoutMs / 60000) + ' minutes...')
       console.log('')
 
-      const result = await waitForJikeManualPublish(
+      const networkConfirmation = waitForJikeCreateResponse(page, timeoutMs)
+      const domConfirmation = waitForJikeManualPublish(
         page,
         normalizedContent,
         timeoutMs,
       )
+
+      const result = await Promise.race([
+        networkConfirmation.then((value) => value || domConfirmation),
+        domConfirmation,
+      ])
 
       return {
         ...result,
