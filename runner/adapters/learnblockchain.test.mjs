@@ -105,6 +105,18 @@ test('extracts LearnBlockchain CDN image URLs from upload responses', () => {
     'https://img.learnblockchain.cn/attachments/2026/10/example.jpg',
   )
   assert.equal(
+    extractLearnBlockchainImageUrl(
+      'https://learnblockchain.cn/image/show/attachments-2026-10-example.png',
+    ),
+    'https://learnblockchain.cn/image/show/attachments-2026-10-example.png',
+  )
+  assert.equal(
+    extractLearnBlockchainImageUrl(
+      '/image/show/attachments-2026-10-example.png',
+    ),
+    'https://learnblockchain.cn/image/show/attachments-2026-10-example.png',
+  )
+  assert.equal(
     extractLearnBlockchainImageUrl('{"ok":true}'),
     null,
   )
