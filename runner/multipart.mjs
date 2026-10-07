@@ -14,13 +14,21 @@ function safeFilename(value, index) {
   return String(index + 1).padStart(2, '0') + '-' + (cleaned || 'image')
 }
 
-export async function readXiaohongshuNoteMultipart(req) {
+async function readImagePostMultipart(
+  req,
+  {
+    platformLabel,
+    tempPrefix,
+    requireImages,
+    allowedImageTypes = null,
+  },
+) {
   const contentType = String(req.headers['content-type'] || '')
   if (!contentType.toLowerCase().startsWith('multipart/form-data')) {
-    throw new Error('Xiaohongshu note publishing requires multipart/form-data.')
+    throw new Error(platformLabel + ' publishing requires multipart/form-data.')
   }
 
-  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'buttonpost-xhs-'))
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), tempPrefix))
   const fields = {}
   const imagePaths = []
   const writes = []
@@ -50,8 +58,18 @@ export async function readXiaohongshuNoteMultipart(req) {
           return
         }
 
-        if (!String(info.mimeType || '').startsWith('image/')) {
-          parseError = new Error('Only image files can be sent to Xiaohongshu note publishing.')
+        const mimeType = String(info.mimeType || '')
+        const allowed =
+          mimeType.startsWith('image/') &&
+          (!allowedImageTypes || allowedImageTypes.includes(mimeType))
+
+        if (!allowed) {
+          parseError = new Error(
+            platformLabel +
+              ' does not support image type ' +
+              (mimeType || 'unknown') +
+              ' in ButtonPost.',
+          )
           file.resume()
           return
         }
@@ -60,14 +78,18 @@ export async function readXiaohongshuNoteMultipart(req) {
         imagePaths.push(outputPath)
 
         file.on('limit', () => {
-          parseError = new Error('One of the selected images exceeds the 25 MB per-image limit.')
+          parseError = new Error(
+            'One of the selected images exceeds the 25 MB per-image limit.',
+          )
         })
 
         writes.push(pipeline(file, createWriteStream(outputPath)))
       })
 
       parser.on('filesLimit', () => {
-        parseError = new Error('Xiaohongshu publishing accepts at most 9 images per ButtonPost request.')
+        parseError = new Error(
+          platformLabel + ' accepts at most 9 images per ButtonPost request.',
+        )
       })
       parser.on('error', reject)
       parser.on('close', resolve)
@@ -77,7 +99,9 @@ export async function readXiaohongshuNoteMultipart(req) {
     await Promise.all(writes)
 
     if (parseError) throw parseError
-    if (!imagePaths.length) throw new Error('Xiaohongshu image-note publishing requires at least one image.')
+    if (requireImages && !imagePaths.length) {
+      throw new Error(platformLabel + ' publishing requires at least one image.')
+    }
 
     return {
       fields,
@@ -90,4 +114,21 @@ export async function readXiaohongshuNoteMultipart(req) {
     await rm(tempDir, { recursive: true, force: true }).catch(() => {})
     throw cause
   }
+}
+
+export function readXiaohongshuNoteMultipart(req) {
+  return readImagePostMultipart(req, {
+    platformLabel: 'Xiaohongshu image-note',
+    tempPrefix: 'buttonpost-xhs-',
+    requireImages: true,
+  })
+}
+
+export function readJikePostMultipart(req) {
+  return readImagePostMultipart(req, {
+    platformLabel: 'Jike',
+    tempPrefix: 'buttonpost-jike-',
+    requireImages: false,
+    allowedImageTypes: ['image/jpeg', 'image/png'],
+  })
 }
