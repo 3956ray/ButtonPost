@@ -620,46 +620,385 @@ async function fillEditorLocator(page, locator, value) {
   await page.keyboard.insertText(value)
 }
 
-async function uploadLearnBlockchainImages(page, imagePaths) {
-  if (!imagePaths.length) return { uploaded: 0, warning: null }
+async function getLearnBlockchainEditorValue(locator) {
+  return locator.evaluate((element) => {
+    const root = element.classList.contains('CodeMirror')
+      ? element
+      : element.closest?.('.CodeMirror')
+    const editor = root?.CodeMirror
 
-  const imageInput = page
-    .locator(
-      'input[type="file"][accept*="image"], input[type="file"]',
-    )
-    .first()
-
-  if ((await imageInput.count()) === 0) {
-    return {
-      uploaded: 0,
-      warning:
-        'ButtonPost filled the article text, but could not detect LearnBlockchain image upload controls. Add the selected images manually before publishing.',
+    if (editor && typeof editor.getValue === 'function') {
+      return String(editor.getValue() || '')
     }
+
+    if (
+      element instanceof HTMLInputElement ||
+      element instanceof HTMLTextAreaElement
+    ) {
+      return element.value || ''
+    }
+
+    const textarea = root?.querySelector('textarea')
+    if (textarea instanceof HTMLTextAreaElement && textarea.value) {
+      return textarea.value
+    }
+
+    return element.textContent || ''
+  })
+}
+
+export function extractLearnBlockchainImageUrl(value) {
+  if (value === null || value === undefined) return null
+
+  const source =
+    typeof value === 'string' ? value : JSON.stringify(value)
+  if (!source) return null
+
+  const normalized = source
+    .replace(/\\\//g, '/')
+    .replace(/&amp;/g, '&')
+
+  const absolute = normalized.match(
+    /https?:\/\/img\.learnblockchain\.cn\/[^\s"'<>\\]+/i,
+  )
+  if (absolute?.[0]) return absolute[0]
+
+  const relative = normalized.match(
+    /\/?(?:attachments|pics|20\d{2}\/)[^\s"'<>\\]+/i,
+  )
+  if (relative?.[0]) {
+    const pathname = relative[0].startsWith('/')
+      ? relative[0]
+      : '/' + relative[0]
+    return 'https://img.learnblockchain.cn' + pathname
+  }
+
+  return null
+}
+
+function beginLearnBlockchainImageCapture(page) {
+  let imageUrl = null
+
+  const listener = async (response) => {
+    if (imageUrl || !response.ok()) return
+
+    const method = response.request().method()
+    if (!['POST', 'PUT', 'PATCH'].includes(method)) return
+
+    const direct = extractLearnBlockchainImageUrl(response.url())
+    if (direct) {
+      imageUrl = direct
+      return
+    }
+
+    const headers = response.headers()
+    const contentType = String(headers['content-type'] || '')
+    const contentLength = Number(headers['content-length'] || '0')
+
+    if (
+      contentLength > 2 * 1024 * 1024 ||
+      (!contentType.includes('json') &&
+        !contentType.includes('text') &&
+        !contentType.includes('javascript'))
+    ) {
+      return
+    }
+
+    const body = await response.text().catch(() => '')
+    const captured = extractLearnBlockchainImageUrl(body)
+    if (captured) imageUrl = captured
+  }
+
+  page.on('response', listener)
+
+  return {
+    getUrl() {
+      return imageUrl
+    },
+    stop() {
+      page.off('response', listener)
+    },
+  }
+}
+
+function learnBlockchainImageMarkdown(imagePath, imageUrl) {
+  const alt = path
+    .basename(imagePath)
+    .replace(/[\[\]]+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  return `![${alt || 'image'}](${imageUrl})`
+}
+
+function hasMarkdownImageAdded(before, after) {
+  if (!after || after === before) return false
+
+  const beforeCount =
+    (before.match(/!\[[^\]]*\]\([^\n)]+\)/g) || []).length +
+    (before.match(/<img\b/gi) || []).length
+  const afterCount =
+    (after.match(/!\[[^\]]*\]\([^\n)]+\)/g) || []).length +
+    (after.match(/<img\b/gi) || []).length
+
+  const beforeHostedCount =
+    (before.match(/img\.learnblockchain\.cn\//gi) || []).length
+  const afterHostedCount =
+    (after.match(/img\.learnblockchain\.cn\//gi) || []).length
+
+  return afterCount > beforeCount || afterHostedCount > beforeHostedCount
+}
+
+async function appendLearnBlockchainImageMarkdown(
+  page,
+  contentLocator,
+  imagePath,
+  imageUrl,
+) {
+  const current = await getLearnBlockchainEditorValue(contentLocator)
+  if (current.includes(imageUrl)) return
+
+  const markdown = learnBlockchainImageMarkdown(imagePath, imageUrl)
+  const next = current.trimEnd() + '\n\n' + markdown + '\n'
+  await fillEditorLocator(page, contentLocator, next)
+}
+
+async function rankedLearnBlockchainFileInputs(page) {
+  const inputs = page.locator('input[type="file"]')
+  const count = await inputs.count()
+  const ranked = []
+
+  for (let index = 0; index < count; index += 1) {
+    const input = inputs.nth(index)
+    const details = await input
+      .evaluate((element) => {
+        const attributes = [
+          element.getAttribute('accept'),
+          element.getAttribute('name'),
+          element.getAttribute('id'),
+          element.getAttribute('class'),
+          element.getAttribute('aria-label'),
+          element.getAttribute('title'),
+          element.closest('label')?.textContent,
+          element.parentElement?.textContent,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+
+        return {
+          attributes,
+          accept: element.getAttribute('accept') || '',
+          multiple: element.hasAttribute('multiple'),
+        }
+      })
+      .catch(() => null)
+
+    if (!details) continue
+
+    let score = 0
+    if (details.accept.toLowerCase().includes('image')) score += 20
+    if (details.multiple) score += 4
+    if (
+      /image|img|upload|attachment|picture|photo|content|markdown|editor|图片|上传|附件|正文/i.test(
+        details.attributes,
+      )
+    ) {
+      score += 12
+    }
+    if (
+      /cover|featured|avatar|logo|thumb|thumbnail|banner|封面|头像/i.test(
+        details.attributes,
+      )
+    ) {
+      score -= 40
+    }
+
+    ranked.push({ input, score, index })
+  }
+
+  return ranked.sort(
+    (left, right) => right.score - left.score || left.index - right.index,
+  )
+}
+
+async function tryLearnBlockchainFileInput(
+  page,
+  contentLocator,
+  input,
+  imagePath,
+) {
+  const before = await getLearnBlockchainEditorValue(contentLocator)
+  const capture = beginLearnBlockchainImageCapture(page)
+
+  try {
+    await input.setInputFiles(imagePath)
+
+    const deadline = Date.now() + 12_000
+    while (Date.now() < deadline) {
+      const current = await getLearnBlockchainEditorValue(contentLocator)
+      if (hasMarkdownImageAdded(before, current)) {
+        return { ok: true, nativeInserted: true, imageUrl: capture.getUrl() }
+      }
+
+      const imageUrl = capture.getUrl()
+      if (imageUrl) {
+        await sleep(700)
+
+        const afterSettle = await getLearnBlockchainEditorValue(contentLocator)
+        if (!hasMarkdownImageAdded(before, afterSettle)) {
+          await appendLearnBlockchainImageMarkdown(
+            page,
+            contentLocator,
+            imagePath,
+            imageUrl,
+          )
+        }
+
+        return { ok: true, nativeInserted: false, imageUrl }
+      }
+
+      await sleep(400)
+    }
+
+    return { ok: false, nativeInserted: false, imageUrl: null }
+  } catch {
+    return { ok: false, nativeInserted: false, imageUrl: null }
+  } finally {
+    capture.stop()
+  }
+}
+
+async function tryLearnBlockchainToolbarUpload(
+  page,
+  contentLocator,
+  imagePath,
+) {
+  const selectors = [
+    'button[title*="上传图片"]',
+    'button[aria-label*="上传图片"]',
+    'a[title*="上传图片"]',
+    'a[aria-label*="上传图片"]',
+    'button:has-text("上传图片")',
+    'a:has-text("上传图片")',
+    '.editor-toolbar [title*="Upload image" i]',
+    '.editor-toolbar [aria-label*="Upload image" i]',
+  ]
+
+  const button = await firstVisible(page, selectors, 1_500)
+  if (!button) return { ok: false, nativeInserted: false, imageUrl: null }
+
+  const before = await getLearnBlockchainEditorValue(contentLocator)
+  const capture = beginLearnBlockchainImageCapture(page)
+
+  try {
+    const chooserPromise = page
+      .waitForEvent('filechooser', { timeout: 2_500 })
+      .catch(() => null)
+
+    await button.click()
+    const chooser = await chooserPromise
+
+    if (chooser) {
+      await chooser.setFiles(imagePath)
+    } else {
+      const ranked = await rankedLearnBlockchainFileInputs(page)
+      const candidate = ranked.find((item) => item.score > -20)
+      if (!candidate) return { ok: false, nativeInserted: false, imageUrl: null }
+      await candidate.input.setInputFiles(imagePath)
+    }
+
+    const deadline = Date.now() + 12_000
+    while (Date.now() < deadline) {
+      const current = await getLearnBlockchainEditorValue(contentLocator)
+      if (hasMarkdownImageAdded(before, current)) {
+        return { ok: true, nativeInserted: true, imageUrl: capture.getUrl() }
+      }
+
+      const imageUrl = capture.getUrl()
+      if (imageUrl) {
+        await sleep(700)
+        const settled = await getLearnBlockchainEditorValue(contentLocator)
+        if (!hasMarkdownImageAdded(before, settled)) {
+          await appendLearnBlockchainImageMarkdown(
+            page,
+            contentLocator,
+            imagePath,
+            imageUrl,
+          )
+        }
+
+        return { ok: true, nativeInserted: false, imageUrl }
+      }
+
+      await sleep(400)
+    }
+
+    if ((await getLearnBlockchainEditorValue(contentLocator)) !== before) {
+      await fillEditorLocator(page, contentLocator, before)
+    }
+
+    return { ok: false, nativeInserted: false, imageUrl: null }
+  } catch {
+    return { ok: false, nativeInserted: false, imageUrl: null }
+  } finally {
+    capture.stop()
+  }
+}
+
+async function uploadLearnBlockchainImages(
+  page,
+  contentLocator,
+  imagePaths,
+) {
+  if (!imagePaths.length) {
+    return { uploaded: 0, inserted: 0, warning: null }
   }
 
   let uploaded = 0
-  const multiple = (await imageInput.getAttribute('multiple')) !== null
+  let inserted = 0
+  const failed = []
 
-  try {
-    if (multiple) {
-      await imageInput.setInputFiles(imagePaths)
-      uploaded = imagePaths.length
-      await sleep(2_000)
-    } else {
-      for (const imagePath of imagePaths) {
-        await imageInput.setInputFiles(imagePath)
-        uploaded += 1
-        await sleep(1_000)
+  for (const imagePath of imagePaths) {
+    let result = await tryLearnBlockchainToolbarUpload(
+      page,
+      contentLocator,
+      imagePath,
+    )
+
+    if (!result.ok) {
+      const rankedInputs = await rankedLearnBlockchainFileInputs(page)
+
+      for (const candidate of rankedInputs) {
+        result = await tryLearnBlockchainFileInput(
+          page,
+          contentLocator,
+          candidate.input,
+          imagePath,
+        )
+        if (result.ok) break
       }
     }
 
-    return { uploaded, warning: null }
-  } catch {
-    return {
-      uploaded,
-      warning:
-        'LearnBlockchain image upload controls changed while filling the article. Review the editor and add any missing images manually.',
+    if (result.ok) {
+      uploaded += 1
+      inserted += 1
+    } else {
+      failed.push(path.basename(imagePath))
     }
+  }
+
+  return {
+    uploaded,
+    inserted,
+    warning:
+      failed.length > 0
+        ? 'ButtonPost could not insert ' +
+          failed.length +
+          ' LearnBlockchain image(s) into the Markdown body: ' +
+          failed.join(', ') +
+          '. Add them manually before publishing.'
+        : null,
   }
 }
 
@@ -831,6 +1170,7 @@ export async function publishLearnBlockchainArticle({
 
       const media = await uploadLearnBlockchainImages(
         page,
+        editor.content,
         normalizedImages,
       )
 
@@ -839,7 +1179,12 @@ export async function publishLearnBlockchainArticle({
       console.log('LearnBlockchain review mode')
       console.log('  ButtonPost filled the article title and Markdown body.')
       if (media.uploaded) {
-        console.log('  Uploaded local images: ' + media.uploaded)
+        console.log(
+          '  LearnBlockchain images uploaded/inserted: ' +
+            media.inserted +
+            '/' +
+            normalizedImages.length,
+        )
       }
       if (media.warning) {
         console.log('  Media warning: ' + media.warning)
