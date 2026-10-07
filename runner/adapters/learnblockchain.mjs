@@ -741,10 +741,12 @@ function hasMarkdownImageAdded(before, after) {
     (after.match(/!\[[^\]]*\]\([^\n)]+\)/g) || []).length +
     (after.match(/<img\b/gi) || []).length
 
-  return (
-    afterCount > beforeCount ||
-    after.includes('img.learnblockchain.cn/')
-  )
+  const beforeHostedCount =
+    (before.match(/img\.learnblockchain\.cn\//gi) || []).length
+  const afterHostedCount =
+    (after.match(/img\.learnblockchain\.cn\//gi) || []).length
+
+  return afterCount > beforeCount || afterHostedCount > beforeHostedCount
 }
 
 async function appendLearnBlockchainImageMarkdown(
