@@ -1002,7 +1002,7 @@ export async function publishIndieHackersPost({
       } else {
         // Mechanical field mapping for an editor that exposes only one body field.
         await fillIndieHackersText(
-          page,
+          editorPage,
           editor.body,
           normalizedTitle + '\n\n' + normalizedContent,
         )
