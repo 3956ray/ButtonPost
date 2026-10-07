@@ -2,12 +2,18 @@ import Link from 'next/link'
 import { LocalRunnerCard } from '@/components/local-runner-card'
 import { PublisherForm } from '@/components/publisher-form'
 import { getPlatformMetadata } from '@/lib/publishers/registry'
+import type { PlatformId } from '@/lib/publishers/types'
 import { getSupabasePublicConfig } from '@/lib/supabase/config'
 import { createClient } from '@/lib/supabase/server'
 
 async function getAuthState() {
   if (!getSupabasePublicConfig()) {
-    return { configured: false, email: null as string | null }
+    return {
+      configured: false,
+      userId: null as string | null,
+      email: null as string | null,
+      connectedPlatforms: [] as PlatformId[],
+    }
   }
 
   try {
@@ -16,12 +22,40 @@ async function getAuthState() {
       data: { user },
     } = await supabase.auth.getUser()
 
+    if (!user) {
+      return {
+        configured: true,
+        userId: null as string | null,
+        email: null as string | null,
+        connectedPlatforms: [] as PlatformId[],
+      }
+    }
+
+    const { data: connections } = await supabase
+      .from('platform_connections')
+      .select('platform')
+      .eq('user_id', user.id)
+      .eq('status', 'connected')
+
+    const connectedPlatforms = (connections ?? []).flatMap((connection) =>
+      connection.platform === 'x' || connection.platform === 'devto'
+        ? [connection.platform]
+        : [],
+    ) as PlatformId[]
+
     return {
       configured: true,
-      email: user?.email ?? null,
+      userId: user.id,
+      email: user.email ?? null,
+      connectedPlatforms,
     }
   } catch {
-    return { configured: true, email: null as string | null }
+    return {
+      configured: true,
+      userId: null as string | null,
+      email: null as string | null,
+      connectedPlatforms: [] as PlatformId[],
+    }
   }
 }
 
@@ -41,10 +75,13 @@ export default async function HomePage() {
           <div className="auth-nav">
             {!auth.configured ? (
               <span className="auth-chip">Personal MVP</span>
-            ) : auth.email ? (
+            ) : auth.userId ? (
               <form action="/auth/signout" method="post" className="auth-form">
-                <span className="auth-email" title={auth.email}>
-                  {auth.email}
+                <Link className="auth-link" href="/settings/connections">
+                  Connections
+                </Link>
+                <span className="auth-email" title={auth.email ?? undefined}>
+                  {auth.email ?? 'Signed in'}
                 </span>
                 <button type="submit" className="auth-link auth-button">
                   Sign out
@@ -64,7 +101,11 @@ export default async function HomePage() {
         </p>
       </header>
 
-      <PublisherForm platforms={platforms} />
+      <PublisherForm
+        platforms={platforms}
+        connectedPlatforms={auth.connectedPlatforms}
+        signedIn={Boolean(auth.userId)}
+      />
       <LocalRunnerCard />
 
       <footer className="footer">

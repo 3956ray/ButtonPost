@@ -35,6 +35,25 @@ export type PlatformMetadata = {
   requiredEnv: string[]
 }
 
+export type XOAuth1Credential = {
+  kind: 'x-oauth1'
+  accessToken: string
+  accessSecret: string
+}
+
+export type DevtoApiKeyCredential = {
+  kind: 'devto-api-key'
+  apiKey: string
+}
+
+export type PlatformCredential =
+  | XOAuth1Credential
+  | DevtoApiKeyCredential
+
+export type PlatformCredentialMap = Partial<
+  Record<PlatformId, PlatformCredential>
+>
+
 export interface PublisherAdapter {
   readonly id: PlatformId
   readonly name: string
@@ -42,5 +61,8 @@ export interface PublisherAdapter {
   readonly requiredEnv: string[]
   configured(): boolean
   validate(post: SourcePost): ValidationResult
-  publish(post: SourcePost): Promise<PublishResult>
+  publish(
+    post: SourcePost,
+    credential?: PlatformCredential,
+  ): Promise<PublishResult>
 }

@@ -21,6 +21,8 @@ import type {
 
 type Props = {
   platforms: PlatformMetadata[]
+  connectedPlatforms: PlatformId[]
+  signedIn: boolean
 }
 
 type ApiResponse = {
@@ -80,13 +82,21 @@ function safeUploadName(file: File, index: number) {
   return `buttonpost/${Date.now()}-${index + 1}-${cleaned || 'image'}`
 }
 
-export function PublisherForm({ platforms }: Props) {
+export function PublisherForm({
+  platforms,
+  connectedPlatforms,
+  signedIn,
+}: Props) {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [images, setImages] = useState<File[]>([])
-  const [secret, setSecret] = useState('')
   const [selected, setSelected] = useState<DestinationId[]>(() => [
-    ...platforms.map((platform) => platform.id),
+    ...platforms
+      .filter(
+        (platform) =>
+          platform.configured && connectedPlatforms.includes(platform.id),
+      )
+      .map((platform) => platform.id),
     ...ACTIVE_LOCAL_DESTINATIONS,
   ])
   const [results, setResults] = useState<DisplayPublishResult[]>([])
@@ -141,7 +151,12 @@ export function PublisherForm({ platforms }: Props) {
     setTitle(entry.title)
     setContent(entry.content)
     const serverPlatformIds = new Set<DestinationId>(
-      platforms.map((platform) => platform.id),
+      platforms
+        .filter(
+          (platform) =>
+            platform.configured && connectedPlatforms.includes(platform.id),
+        )
+        .map((platform) => platform.id),
     )
     setSelected(
       entry.selected.filter(
@@ -195,19 +210,11 @@ export function PublisherForm({ platforms }: Props) {
   async function uploadImagesForServerPlatforms(): Promise<SourceMedia[]> {
     if (!images.length) return []
 
-    if (!secret.trim()) {
-      throw new Error(
-        'Publish key is required before ButtonPost can upload images for X or DEV.',
-      )
-    }
-
     setMediaProgress('Preparing media upload...')
 
     try {
       const ticketResponse = await fetch('/api/media/ticket', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret }),
       })
       const ticketData = (await ticketResponse.json().catch(() => ({}))) as {
         ticket?: string
@@ -263,7 +270,6 @@ export function PublisherForm({ platforms }: Props) {
           title,
           content,
           platforms: serverPlatforms,
-          secret,
           media,
         }),
       })
@@ -601,11 +607,6 @@ export function PublisherForm({ platforms }: Props) {
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (!secret.trim()) {
-      setError('Publish key is required before any publish action.')
-      return
-    }
-
     setSubmitting(true)
     setError('')
     setResults([])
@@ -782,26 +783,40 @@ export function PublisherForm({ platforms }: Props) {
       <aside className="side-pane">
         <h2 className="section-title">Publish to</h2>
         <div className="platform-list">
-          {platforms.map((platform) => (
-            <label className="platform" key={platform.id}>
-              <input
-                type="checkbox"
-                checked={selected.includes(platform.id)}
-                onChange={() => togglePlatform(platform.id)}
-              />
-              <span className="platform-copy">
-                <span className="platform-name">
-                  <span className={'dot ' + (platform.configured ? '' : 'off')} />
-                  {platform.name}
+          {platforms.map((platform) => {
+            const connected =
+              platform.configured &&
+              connectedPlatforms.includes(platform.id)
+
+            return (
+              <label
+                className={'platform ' + (connected ? '' : 'disabled')}
+                key={platform.id}
+              >
+                <input
+                  type="checkbox"
+                  checked={selected.includes(platform.id)}
+                  disabled={!connected}
+                  onChange={() => togglePlatform(platform.id)}
+                />
+                <span className="platform-copy">
+                  <span className="platform-name">
+                    <span className={'dot ' + (connected ? '' : 'off')} />
+                    {platform.name}
+                  </span>
+                  <span className="platform-note">
+                    {!platform.configured
+                      ? 'Integration unavailable'
+                      : connected
+                        ? platform.mode
+                        : signedIn
+                          ? 'Connect in Settings'
+                          : 'Sign in to connect'}
+                  </span>
                 </span>
-                <span className="platform-note">
-                  {platform.configured
-                    ? platform.mode
-                    : 'Needs ' + platform.requiredEnv.join(' + ')}
-                </span>
-              </span>
-            </label>
-          ))}
+              </label>
+            )
+          })}
 
           <label className="platform">
             <input
@@ -850,22 +865,11 @@ export function PublisherForm({ platforms }: Props) {
 
         </div>
 
-        <div className="secret-wrap">
-          <label className="label" htmlFor="secret">Publish key</label>
-          <input
-            className="secret-input"
-            id="secret"
-            type="password"
-            value={secret}
-            onChange={(event) => setSecret(event.target.value)}
-            autoComplete="off"
-            placeholder="BUTTONPOST_SECRET"
-            required
-          />
-          <p className="helper">
-            Required before any publish action. It authorizes the ButtonPost publish UI; X / DEV and server media use it server-side. Local Runner platforms do not receive this key.
-          </p>
-        </div>
+        {signedIn ? (
+          <a className="connections-shortcut" href="/settings/connections">
+            Manage X / DEV connections →
+          </a>
+        ) : null}
 
         {selected.includes('xiaohongshu') && images.length === 0 ? (
           <p className="selection-warning">
@@ -880,8 +884,7 @@ export function PublisherForm({ platforms }: Props) {
             submitting ||
             selected.length === 0 ||
             !title.trim() ||
-            !content.trim() ||
-            !secret.trim()
+            !content.trim()
           }
         >
           {submitting ? 'Publishing…' : 'Publish everywhere (' + selected.length + ')'}

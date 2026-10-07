@@ -1,6 +1,11 @@
+import { loadCredential } from '@/lib/connections/store'
 import { publishEverywhere } from '@/lib/publishers/publish-everywhere'
-import { PLATFORM_IDS, type PlatformId } from '@/lib/publishers/types'
-import { authorizePublish } from '@/lib/security/publish-secret'
+import {
+  PLATFORM_IDS,
+  type PlatformCredentialMap,
+  type PlatformId,
+} from '@/lib/publishers/types'
+import { createClient } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
 
@@ -8,11 +13,12 @@ type PublishRequest = {
   title?: unknown
   content?: unknown
   platforms?: unknown
-  secret?: unknown
   media?: unknown
 }
 
-function isSourceMedia(value: unknown): value is { url: string; name?: string; contentType?: string } {
+function isSourceMedia(
+  value: unknown,
+): value is { url: string; name?: string; contentType?: string } {
   if (!value || typeof value !== 'object') return false
   const media = value as Record<string, unknown>
 
@@ -28,24 +34,37 @@ function isSourceMedia(value: unknown): value is { url: string; name?: string; c
 
   return (
     (media.name === undefined || typeof media.name === 'string') &&
-    (media.contentType === undefined || typeof media.contentType === 'string')
+    (media.contentType === undefined ||
+      typeof media.contentType === 'string')
   )
 }
 
 function isPlatformId(value: unknown): value is PlatformId {
-  return typeof value === 'string' && (PLATFORM_IDS as readonly string[]).includes(value)
+  return (
+    typeof value === 'string' &&
+    (PLATFORM_IDS as readonly string[]).includes(value)
+  )
 }
 
 export async function POST(request: Request) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return Response.json({ error: 'Sign in is required.' }, { status: 401 })
+  }
+
   let body: PublishRequest
   try {
     body = (await request.json()) as PublishRequest
   } catch {
-    return Response.json({ error: 'Request body must be valid JSON.' }, { status: 400 })
+    return Response.json(
+      { error: 'Request body must be valid JSON.' },
+      { status: 400 },
+    )
   }
-
-  const auth = authorizePublish(body.secret)
-  if (!auth.ok) return Response.json({ error: auth.error }, { status: auth.status })
 
   if (typeof body.title !== 'string' || !body.title.trim()) {
     return Response.json({ error: 'Title is required.' }, { status: 400 })
@@ -53,24 +72,55 @@ export async function POST(request: Request) {
   if (typeof body.content !== 'string' || !body.content.trim()) {
     return Response.json({ error: 'Content is required.' }, { status: 400 })
   }
-  if (!Array.isArray(body.platforms) || body.platforms.length === 0 || !body.platforms.every(isPlatformId)) {
-    return Response.json({ error: 'Choose at least one supported platform.' }, { status: 400 })
+  if (
+    !Array.isArray(body.platforms) ||
+    body.platforms.length === 0 ||
+    !body.platforms.every(isPlatformId)
+  ) {
+    return Response.json(
+      { error: 'Choose at least one supported platform.' },
+      { status: 400 },
+    )
   }
 
   const media =
     body.media === undefined
       ? []
-      : Array.isArray(body.media) && body.media.length <= 9 && body.media.every(isSourceMedia)
+      : Array.isArray(body.media) &&
+          body.media.length <= 9 &&
+          body.media.every(isSourceMedia)
         ? body.media
         : null
 
   if (media === null) {
-    return Response.json({ error: 'Media must be an array of up to 9 ButtonPost Vercel Blob image URLs.' }, { status: 400 })
+    return Response.json(
+      {
+        error:
+          'Media must be an array of up to 9 ButtonPost Vercel Blob image URLs.',
+      },
+      { status: 400 },
+    )
+  }
+
+  const credentials: PlatformCredentialMap = {}
+
+  for (const platform of [...new Set(body.platforms)]) {
+    const credential = await loadCredential(
+      supabase,
+      user.id,
+      platform,
+    )
+    if (credential) credentials[platform] = credential
   }
 
   const results = await publishEverywhere(
-    { title: body.title.trim(), content: body.content, media },
+    {
+      title: body.title.trim(),
+      content: body.content,
+      media,
+    },
     body.platforms,
+    credentials,
   )
 
   return Response.json({ results })
