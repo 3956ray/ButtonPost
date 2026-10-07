@@ -49,7 +49,12 @@ export default async function ConnectionsPage({ searchParams }: Props) {
             are scoped to your ButtonPost user and encrypted at rest.
           </p>
         </div>
-        <span className="auth-chip">{user.email}</span>
+        <div className="settings-header-actions">
+          <Link className="auth-link" href="/settings/billing">
+            Billing
+          </Link>
+          <span className="auth-chip">{user.email}</span>
+        </div>
       </header>
 
       <ConnectionsPanel

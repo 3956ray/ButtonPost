@@ -1,3 +1,4 @@
+import { canUseCloudPublishing } from '@/lib/billing/entitlement'
 import { createMediaUploadTicket } from '@/lib/security/media-ticket'
 import { createClient } from '@/lib/supabase/server'
 
@@ -11,6 +12,24 @@ export async function POST() {
 
   if (!user) {
     return Response.json({ error: 'Sign in is required.' }, { status: 401 })
+  }
+
+  try {
+    const allowed = await canUseCloudPublishing(supabase, user.id)
+    if (!allowed) {
+      return Response.json(
+        {
+          error: 'ButtonPost Pro is required for cloud media uploads.',
+          code: 'subscription_required',
+        },
+        { status: 402 },
+      )
+    }
+  } catch {
+    return Response.json(
+      { error: 'Could not verify ButtonPost subscription status.' },
+      { status: 503 },
+    )
   }
 
   if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BLOB_STORE_ID) {
