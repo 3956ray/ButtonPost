@@ -4,6 +4,7 @@ import path from 'node:path'
 import test from 'node:test'
 import {
   isLearnBlockchainLoginUrl,
+  isLearnBlockchainSiteUrl,
   learnBlockchainProfileDir,
   normalizeLearnBlockchainAccountName,
 } from './learnblockchain.mjs'
@@ -40,6 +41,22 @@ test('recognizes LearnBlockchain login-style URLs', () => {
   )
   assert.equal(
     isLearnBlockchainLoginUrl('https://learnblockchain.cn/article/123'),
+    false,
+  )
+})
+
+
+test('recognizes LearnBlockchain site URLs without treating GitHub OAuth as local auth', () => {
+  assert.equal(
+    isLearnBlockchainSiteUrl('https://learnblockchain.cn/'),
+    true,
+  )
+  assert.equal(
+    isLearnBlockchainSiteUrl('https://www.learnblockchain.cn/article/1'),
+    true,
+  )
+  assert.equal(
+    isLearnBlockchainSiteUrl('https://github.com/login/oauth/authorize'),
     false,
   )
 })
