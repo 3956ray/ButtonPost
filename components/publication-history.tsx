@@ -186,14 +186,16 @@ export function PublicationHistory({ entries, onReuse, onClear }: Props) {
                   </div>
 
                   <div className="history-item-actions">
-                    <button
-                      type="button"
-                      className="history-details"
-                      aria-expanded={activePlatform ? true : expanded}
-                      onClick={() => toggleExpanded(entry.id)}
-                    >
-                      {expanded ? 'Hide details' : 'Details'}
-                    </button>
+                    {!activePlatform ? (
+                      <button
+                        type="button"
+                        className="history-details"
+                        aria-expanded={expanded}
+                        onClick={() => toggleExpanded(entry.id)}
+                      >
+                        {expanded ? 'Hide details' : 'Details'}
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       className="history-reuse"
@@ -205,7 +207,7 @@ export function PublicationHistory({ entries, onReuse, onClear }: Props) {
                 </div>
 
                 <div className="history-platforms">
-                  <span className="history-platforms-label">Published to</span>
+                  <span className="history-platforms-label">Destinations</span>
                   <div className="history-platform-chips">
                     {entry.selected.map((platform) => {
                       const status = platformStatusLabel(entry, platform)
