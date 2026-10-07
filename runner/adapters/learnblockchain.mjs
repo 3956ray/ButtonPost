@@ -5,6 +5,14 @@ import { chromium } from 'patchright'
 
 const LBC_URL = 'https://learnblockchain.cn/'
 
+function learnBlockchainLoginTimeoutMs() {
+  const minutes = Number(
+    process.env.BUTTONPOST_LBC_LOGIN_TIMEOUT_MINUTES || '15',
+  )
+  const normalized = Number.isFinite(minutes) && minutes > 0 ? minutes : 15
+  return normalized * 60 * 1000
+}
+
 const AUTH_MARKERS = [
   'a:has-text("写文章")',
   'button:has-text("写文章")',
@@ -53,11 +61,20 @@ async function profileExists(profileDir) {
   }
 }
 
+export function isLearnBlockchainSiteUrl(value) {
+  try {
+    const url = new URL(value)
+    return ['learnblockchain.cn', 'www.learnblockchain.cn'].includes(url.hostname)
+  } catch {
+    return false
+  }
+}
+
 export function isLearnBlockchainLoginUrl(value) {
   try {
     const url = new URL(value)
     return (
-      ['learnblockchain.cn', 'www.learnblockchain.cn'].includes(url.hostname) &&
+      isLearnBlockchainSiteUrl(value) &&
       (
         url.pathname.includes('/login') ||
         url.pathname.includes('/signin') ||
@@ -70,6 +87,8 @@ export function isLearnBlockchainLoginUrl(value) {
 }
 
 async function hasAuthenticatedMarker(page) {
+  if (page.isClosed() || !isLearnBlockchainSiteUrl(page.url())) return false
+
   for (const selector of AUTH_MARKERS) {
     try {
       const locator = page.locator(selector).first()
@@ -85,6 +104,8 @@ async function hasAuthenticatedMarker(page) {
 }
 
 async function loginPromptVisible(page) {
+  if (page.isClosed() || !isLearnBlockchainSiteUrl(page.url())) return false
+
   for (const text of ['登录', '登陆']) {
     try {
       const locator = page.getByText(text, { exact: true }).first()
@@ -217,9 +238,25 @@ async function clickLoginIfAvailable(page) {
   return false
 }
 
+async function findAuthenticatedLearnBlockchainPage(context) {
+  for (const candidate of context.pages()) {
+    if (candidate.isClosed() || !isLearnBlockchainSiteUrl(candidate.url())) {
+      continue
+    }
+
+    if (await hasAuthenticatedMarker(candidate)) return candidate
+  }
+
+  return null
+}
+
+function activePages(context) {
+  return context.pages().filter((candidate) => !candidate.isClosed())
+}
+
 export async function loginLearnBlockchain(
   account = 'default',
-  { timeoutMs = 8 * 60_000 } = {},
+  { timeoutMs = learnBlockchainLoginTimeoutMs() } = {},
 ) {
   const accountName = normalizeLearnBlockchainAccountName(account)
   const userDataDir = learnBlockchainProfileDir(accountName)
@@ -235,7 +272,7 @@ export async function loginLearnBlockchain(
         viewport: null,
       })
 
-      const page = context.pages()[0] || (await context.newPage())
+      let page = context.pages()[0] || (await context.newPage())
 
       if (await verifyAuthenticated(page).catch(() => false)) {
         return {
@@ -248,6 +285,10 @@ export async function loginLearnBlockchain(
         }
       }
 
+      if (page.isClosed()) {
+        page = activePages(context)[0] || (await context.newPage())
+      }
+
       await page.goto(LBC_URL, {
         waitUntil: 'domcontentloaded',
         timeout: 30_000,
@@ -255,33 +296,61 @@ export async function loginLearnBlockchain(
       await page.waitForTimeout(1_000)
       await clickLoginIfAvailable(page).catch(() => false)
 
+      console.log('')
+      console.log('LearnBlockchain login')
+      console.log('  Complete the full GitHub OAuth / verification flow in Chrome.')
+      console.log('  ButtonPost will keep every OAuth tab/window open until the')
+      console.log('  browser returns to learnblockchain.cn and login is confirmed.')
+      console.log(
+        '  Waiting up to ' + Math.round(timeoutMs / 60000) + ' minutes...',
+      )
+      console.log('')
+
       const deadline = Date.now() + timeoutMs
+      let emptySince = null
+
       while (Date.now() < deadline) {
-        if (page.isClosed()) {
-          return {
-            ok: false,
-            platform: 'learnblockchain',
-            account: accountName,
-            authenticated: false,
-            status: 'cancelled',
-            message:
-              'The LearnBlockchain login window was closed before login completed.',
+        const pages = activePages(context)
+
+        if (pages.length === 0) {
+          emptySince ??= Date.now()
+          if (Date.now() - emptySince > 3_000) {
+            return {
+              ok: false,
+              platform: 'learnblockchain',
+              account: accountName,
+              authenticated: false,
+              status: 'cancelled',
+              message:
+                'All LearnBlockchain/GitHub login windows were closed before login completed.',
+            }
+          }
+        } else {
+          emptySince = null
+        }
+
+        const authenticatedPage =
+          await findAuthenticatedLearnBlockchainPage(context)
+
+        if (authenticatedPage) {
+          // Give the OAuth callback/session storage a moment to settle before
+          // persisting and closing the browser context.
+          await sleep(2_000)
+
+          if (await hasAuthenticatedMarker(authenticatedPage)) {
+            return {
+              ok: true,
+              platform: 'learnblockchain',
+              account: accountName,
+              authenticated: true,
+              status: 'connected',
+              message:
+                'LearnBlockchain login completed and was saved locally.',
+            }
           }
         }
 
-        if (await hasAuthenticatedMarker(page)) {
-          return {
-            ok: true,
-            platform: 'learnblockchain',
-            account: accountName,
-            authenticated: true,
-            status: 'connected',
-            message:
-              'LearnBlockchain login completed and was saved locally.',
-          }
-        }
-
-        await sleep(1_500)
+        await sleep(1_000)
       }
 
       return {
@@ -290,7 +359,8 @@ export async function loginLearnBlockchain(
         account: accountName,
         authenticated: false,
         status: 'timeout',
-        message: 'Timed out waiting for LearnBlockchain login.',
+        message:
+          'Timed out waiting for the GitHub OAuth flow to return to LearnBlockchain. The browser was kept open for the full login window.',
       }
     } catch (cause) {
       throw chromeLaunchError(cause)
