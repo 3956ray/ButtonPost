@@ -222,6 +222,16 @@ export async function getLearnBlockchainStatus(account = 'default') {
   })
 }
 
+async function hasInjectedWallet(page) {
+  if (page.isClosed() || !isLearnBlockchainSiteUrl(page.url())) return false
+
+  try {
+    return await page.evaluate(() => Boolean(globalThis.ethereum))
+  } catch {
+    return false
+  }
+}
+
 async function clickLoginIfAvailable(page) {
   for (const text of ['登录', '登陆']) {
     try {
@@ -296,11 +306,23 @@ export async function loginLearnBlockchain(
       await page.waitForTimeout(1_000)
       await clickLoginIfAvailable(page).catch(() => false)
 
+      const walletDetected = await hasInjectedWallet(page)
+
       console.log('')
       console.log('LearnBlockchain login')
-      console.log('  Complete the full GitHub OAuth / verification flow in Chrome.')
-      console.log('  ButtonPost will keep every OAuth tab/window open until the')
-      console.log('  browser returns to learnblockchain.cn and login is confirmed.')
+      console.log('  Choose any supported login method in Chrome:')
+      console.log('  GitHub / MetaMask / email-password / phone / WeChat.')
+      console.log('  ButtonPost never reads your password, verification code,')
+      console.log('  wallet seed phrase, private key, or approval signature.')
+      if (walletDetected) {
+        console.log('  Injected Web3 wallet detected in this local browser profile.')
+      } else {
+        console.log('  No injected Web3 wallet detected in this local profile.')
+        console.log('  For MetaMask login, install/unlock MetaMask in this')
+        console.log('  dedicated ButtonPost Chrome profile once, then retry.')
+      }
+      console.log('  All provider tabs/windows stay open until the browser')
+      console.log('  returns to learnblockchain.cn and login is confirmed.')
       console.log(
         '  Waiting up to ' + Math.round(timeoutMs / 60000) + ' minutes...',
       )
