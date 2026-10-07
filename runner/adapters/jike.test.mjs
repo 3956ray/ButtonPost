@@ -3,6 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 import {
+  extractJikePostId,
   isJikeLoginUrl,
   jikeProfileDir,
   normalizeJikeAccountName,
@@ -24,4 +25,13 @@ test('recognizes Jike login URLs', () => {
   assert.equal(isJikeLoginUrl('https://web.okjike.com/login'), true)
   assert.equal(isJikeLoginUrl('https://web.okjike.com/login/qr'), true)
   assert.equal(isJikeLoginUrl('https://web.okjike.com/recommend'), false)
+})
+
+
+test('extracts a Jike post id from common create response shapes', () => {
+  assert.equal(extractJikePostId({ id: 'one' }), 'one')
+  assert.equal(extractJikePostId({ data: { id: 'two' } }), 'two')
+  assert.equal(extractJikePostId({ post: { id: 'three' } }), 'three')
+  assert.equal(extractJikePostId({ data: { post: { id: 'four' } } }), 'four')
+  assert.equal(extractJikePostId({ success: true }), null)
 })

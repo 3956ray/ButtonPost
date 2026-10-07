@@ -130,7 +130,8 @@ ButtonPost:
 3. uploads selected JPEG/PNG images directly through the Local Runner (up to 9);
 4. leaves Chrome open so you can select a circle and review text/images;
 5. waits for **you** to click Jike's **发送** button;
-6. detects the composer clearing and the new post appearing, then returns `published` and updates Publication History.
+6. listens for Jike's successful `POST /1.0/originalPosts/create` response as the primary confirmation; DOM/feed detection remains a fallback;
+7. returns `published` (with a post URL when the API response contains the id) and updates Publication History.
 
 The default review window is 30 minutes. Configure it with:
 
