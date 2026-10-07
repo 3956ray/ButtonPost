@@ -154,26 +154,99 @@ async function signInFormVisible(page) {
   }
 }
 
+async function loggedOutControlVisible(page) {
+  if (page.isClosed()) return true
+
+  if (await signInFormVisible(page)) return true
+
+  for (const pattern of [/^sign in$/i, /^log in$/i, /^join$/i]) {
+    for (const role of ['link', 'button']) {
+      try {
+        const locator = page.getByRole(role, { name: pattern }).first()
+        if ((await locator.count()) > 0 && (await locator.isVisible())) {
+          return true
+        }
+      } catch {
+        // Try the next role/label.
+      }
+    }
+  }
+
+  return false
+}
+
+async function accountMarkerVisible(page) {
+  if (page.isClosed() || !isIndieHackersUrl(page.url())) return false
+
+  const selectors = [
+    '[data-testid*="avatar" i]',
+    'header [class*="avatar" i]',
+    'nav [class*="avatar" i]',
+    'header [aria-label*="profile" i]',
+    'nav [aria-label*="profile" i]',
+    'header [aria-label*="account" i]',
+    'nav [aria-label*="account" i]',
+    'header a[href*="/people/"]',
+    'nav a[href*="/people/"]',
+    'header a[href*="/profile/"]',
+    'nav a[href*="/profile/"]',
+  ]
+
+  for (const selector of selectors) {
+    try {
+      const locator = page.locator(selector).first()
+      if ((await locator.count()) > 0 && (await locator.isVisible())) {
+        return true
+      }
+    } catch {
+      // Continue while the header hydrates.
+    }
+  }
+
+  try {
+    return await page.locator('img').evaluateAll((images) =>
+      images.some((image) => {
+        const rect = image.getBoundingClientRect()
+        const style = getComputedStyle(image)
+        const radius = parseFloat(style.borderRadius || '0')
+
+        return (
+          rect.width >= 24 &&
+          rect.width <= 96 &&
+          rect.height >= 24 &&
+          rect.height <= 96 &&
+          rect.top >= 0 &&
+          rect.top < 260 &&
+          rect.left > window.innerWidth * 0.72 &&
+          radius >= Math.min(rect.width, rect.height) * 0.3
+        )
+      }),
+    )
+  } catch {
+    return false
+  }
+}
+
 async function verifyAuthenticated(page) {
-  await page.goto(IH_NEW_POST_URL, {
+  await page.goto(IH_HOME_URL, {
     waitUntil: 'domcontentloaded',
     timeout: 30_000,
   })
   await page.waitForTimeout(1_500)
 
   if (isIndieHackersSignInUrl(page.url())) return false
-  if (await signInFormVisible(page)) return false
-  if (await hasPostEditorMarker(page)) return true
+  if (await loggedOutControlVisible(page)) return false
+  if (await accountMarkerVisible(page)) return true
 
-  const deadline = Date.now() + 12_000
+  const deadline = Date.now() + 8_000
   while (Date.now() < deadline) {
     if (isIndieHackersSignInUrl(page.url())) return false
-    if (await signInFormVisible(page)) return false
-    if (await hasPostEditorMarker(page)) return true
+    if (await loggedOutControlVisible(page)) return false
+    if (await accountMarkerVisible(page)) return true
     await sleep(500)
   }
 
-  return isIndieHackersNewPostUrl(page.url())
+  return false
 }
 
 function chromeLaunchError(cause) {
@@ -238,15 +311,21 @@ export async function getIndieHackersStatus(account = 'default') {
 
       const page = context.pages()[0] || (await context.newPage())
       const authenticated = await verifyAuthenticated(page)
+      const postingAllowed = authenticated
+        ? await hasIndieHackersPostingAccess(page)
+        : false
 
       return {
         ok: true,
         platform: 'indiehackers',
         account: accountName,
         authenticated,
+        postingAllowed,
         status: authenticated ? 'connected' : 'expired',
         message: authenticated
-          ? 'Indie Hackers login is valid.'
+          ? postingAllowed
+            ? 'Indie Hackers login is valid and posting access is available.'
+            : 'Indie Hackers login is valid, but this account does not currently expose a New Post control. Posting access may still be restricted.'
           : 'Indie Hackers login is missing or expired.',
       }
     } catch (cause) {
@@ -278,13 +357,17 @@ export async function loginIndieHackers(
       const page = context.pages()[0] || (await context.newPage())
 
       if (await verifyAuthenticated(page).catch(() => false)) {
+        const postingAllowed = await hasIndieHackersPostingAccess(page)
         return {
           ok: true,
           platform: 'indiehackers',
           account: accountName,
           authenticated: true,
+          postingAllowed,
           status: 'connected',
-          message: 'Indie Hackers was already connected.',
+          message: postingAllowed
+            ? 'Indie Hackers was already connected and posting access is available.'
+            : 'Indie Hackers was already connected, but this account does not currently expose a New Post control.',
         }
       }
 
@@ -298,7 +381,7 @@ export async function loginIndieHackers(
       console.log('Indie Hackers login')
       console.log('  Complete sign-in directly in the local Chrome window.')
       console.log('  ButtonPost never reads or stores your Indie Hackers password.')
-      console.log('  After sign-in, ButtonPost checks the protected /post/new page.')
+      console.log('  After sign-in, ButtonPost checks the real homepage account state.')
       console.log(
         '  Waiting up to ' + Math.round(timeoutMs / 60000) + ' minutes...',
       )
@@ -331,15 +414,18 @@ export async function loginIndieHackers(
           )
 
           if (authenticated) {
+            const postingAllowed = await hasIndieHackersPostingAccess(page)
             await sleep(1_500)
             return {
               ok: true,
               platform: 'indiehackers',
               account: accountName,
               authenticated: true,
+              postingAllowed,
               status: 'connected',
-              message:
-                'Indie Hackers login completed and was saved locally.',
+              message: postingAllowed
+                ? 'Indie Hackers login completed. Posting access is available and the session was saved locally.'
+                : 'Indie Hackers login completed and was saved locally. This account is connected, but Indie Hackers does not currently expose a New Post control for it.',
             }
           }
 
@@ -372,6 +458,188 @@ export const INDIE_HACKERS_HOME_URL = IH_HOME_URL
 export const INDIE_HACKERS_SIGN_IN_URL = IH_SIGN_IN_URL
 export const INDIE_HACKERS_NEW_POST_URL = IH_NEW_POST_URL
 
+
+async function visiblePostEntryCandidates(page) {
+  const controls = page.locator('a, button, [role="button"]')
+  const count = await controls.count()
+  const candidates = []
+
+  for (let index = 0; index < count; index += 1) {
+    const control = controls.nth(index)
+
+    try {
+      if (!(await control.isVisible())) continue
+
+      const meta = await control.evaluate((element) => ({
+        text: element.textContent || '',
+        ariaLabel: element.getAttribute('aria-label') || '',
+        title: element.getAttribute('title') || '',
+        href:
+          element instanceof HTMLAnchorElement
+            ? element.getAttribute('href') || ''
+            : '',
+      }))
+
+      const label = normalizeControlText(
+        [meta.text, meta.ariaLabel, meta.title].join(' '),
+      )
+
+      let score = 0
+
+      if (
+        /^(new post|create post|write post|start a discussion|start discussion|share a post|share post|add post)$/.test(
+          label,
+        )
+      ) {
+        score += 100
+      }
+
+      if (
+        /(new post|create post|write post|start.*discussion|share.*post|add.*post)/.test(
+          label,
+        )
+      ) {
+        score += 55
+      }
+
+      if (/\/post\/(new|create)|\/new-post|\/posts\/new|\/discussion\/new/i.test(meta.href)) {
+        score += 45
+      }
+
+      if (/newest posts|latest posts|posts db|products db/.test(label)) {
+        score -= 100
+      }
+
+      if (score > 0) {
+        candidates.push({ control, meta, label, score })
+      }
+    } catch {
+      // Keep scanning the current UI.
+    }
+  }
+
+  return candidates.sort((left, right) => right.score - left.score)
+}
+
+async function openIndieHackersMenu(page) {
+  const selectors = [
+    'button[aria-label*="menu" i]',
+    '[role="button"][aria-label*="menu" i]',
+    'button[class*="menu" i]',
+    'button[class*="hamburger" i]',
+  ]
+
+  for (const selector of selectors) {
+    try {
+      const locator = page.locator(selector).first()
+      if ((await locator.count()) > 0 && (await locator.isVisible())) {
+        await locator.click()
+        await sleep(500)
+        return true
+      }
+    } catch {
+      // Try another menu affordance.
+    }
+  }
+
+  try {
+    const index = await page.locator('button').evaluateAll((buttons) =>
+      buttons.findIndex((button) => {
+        const rect = button.getBoundingClientRect()
+        const text = (button.textContent || '').trim()
+        return (
+          rect.width > 20 &&
+          rect.width < 90 &&
+          rect.height > 20 &&
+          rect.height < 90 &&
+          rect.top >= 0 &&
+          rect.top < 240 &&
+          rect.left >= 0 &&
+          rect.left < 100 &&
+          text.length <= 3
+        )
+      }),
+    )
+
+    if (index >= 0) {
+      await page.locator('button').nth(index).click()
+      await sleep(500)
+      return true
+    }
+  } catch {
+    // No recognizable menu button.
+  }
+
+  return false
+}
+
+async function tryOpenPostEntry(page, candidate) {
+  try {
+    if (candidate.meta.href) {
+      await page.goto(new URL(candidate.meta.href, page.url()).toString(), {
+        waitUntil: 'domcontentloaded',
+        timeout: 30_000,
+      })
+    } else {
+      await candidate.control.click()
+      await page.waitForTimeout(1_000)
+    }
+
+    if (await hasPostEditorMarker(page)) return true
+
+    const deadline = Date.now() + 8_000
+    while (Date.now() < deadline) {
+      if (await hasPostEditorMarker(page)) return true
+      if (isIndieHackersSignInUrl(page.url())) return false
+      await sleep(400)
+    }
+  } catch {
+    return false
+  }
+
+  return false
+}
+
+async function discoverIndieHackersPostEditor(page) {
+  await page.goto(IH_HOME_URL, {
+    waitUntil: 'domcontentloaded',
+    timeout: 30_000,
+  })
+  await page.waitForTimeout(1_200)
+
+  let candidates = await visiblePostEntryCandidates(page)
+
+  for (const candidate of candidates) {
+    if (await tryOpenPostEntry(page, candidate)) return page
+
+    await page.goto(IH_HOME_URL, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000,
+    })
+    await page.waitForTimeout(700)
+  }
+
+  await openIndieHackersMenu(page)
+  candidates = await visiblePostEntryCandidates(page)
+
+  for (const candidate of candidates) {
+    if (await tryOpenPostEntry(page, candidate)) return page
+
+    await page.goto(IH_HOME_URL, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000,
+    })
+    await page.waitForTimeout(700)
+    await openIndieHackersMenu(page)
+  }
+
+  return null
+}
+
+async function hasIndieHackersPostingAccess(page) {
+  const editorPage = await discoverIndieHackersPostEditor(page)
+  return Boolean(editorPage)
+}
 
 function normalizeControlText(value) {
   return String(value || '').replace(/\s+/g, ' ').trim().toLowerCase()
@@ -714,17 +982,23 @@ export async function publishIndieHackersPost({
         }
       }
 
-      await page.goto(IH_NEW_POST_URL, {
-        waitUntil: 'domcontentloaded',
-        timeout: 30_000,
-      })
-      await page.waitForTimeout(1_500)
+      const editorPage = await discoverIndieHackersPostEditor(page)
 
-      const editor = await findIndieHackersEditor(page)
+      if (!editorPage) {
+        return {
+          ok: false,
+          platform: 'indiehackers',
+          status: 'posting_restricted',
+          message:
+            'Indie Hackers is logged in, but this account does not currently expose a New Post control. The old /post/new route now returns 404. Participate in the community until Indie Hackers grants posting access, then retry.',
+        }
+      }
+
+      const editor = await findIndieHackersEditor(editorPage)
 
       if (editor.title) {
-        await fillIndieHackersText(page, editor.title, normalizedTitle)
-        await fillIndieHackersText(page, editor.body, normalizedContent)
+        await fillIndieHackersText(editorPage, editor.title, normalizedTitle)
+        await fillIndieHackersText(editorPage, editor.body, normalizedContent)
       } else {
         // Mechanical field mapping for an editor that exposes only one body field.
         await fillIndieHackersText(
@@ -734,7 +1008,7 @@ export async function publishIndieHackersPost({
         )
       }
 
-      const media = await uploadIndieHackersImages(page, normalizedImages)
+      const media = await uploadIndieHackersImages(editorPage, normalizedImages)
       const timeoutMs = indieHackersReviewTimeoutMs()
 
       console.log('')
