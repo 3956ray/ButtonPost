@@ -7,6 +7,7 @@ import {
   INDIE_HACKERS_SIGN_IN_URL,
   indieHackersProfileDir,
   isIndieHackersNewPostUrl,
+  isIndieHackersPublishedPostUrl,
   isIndieHackersSignInUrl,
   isIndieHackersUrl,
   normalizeIndieHackersAccountName,
@@ -47,6 +48,30 @@ test('recognizes sign-in and protected post URLs', () => {
   assert.equal(isIndieHackersNewPostUrl(INDIE_HACKERS_NEW_POST_URL), true)
   assert.equal(
     isIndieHackersNewPostUrl('https://www.indiehackers.com/post/example'),
+    false,
+  )
+})
+
+
+test('recognizes published Indie Hackers post URLs', () => {
+  assert.equal(
+    isIndieHackersPublishedPostUrl(
+      'https://www.indiehackers.com/post/i-built-buttonpost-abc123',
+    ),
+    true,
+  )
+  assert.equal(
+    isIndieHackersPublishedPostUrl(
+      'https://www.indiehackers.com/post/tech/i-built-buttonpost-abc123',
+    ),
+    true,
+  )
+  assert.equal(
+    isIndieHackersPublishedPostUrl(INDIE_HACKERS_NEW_POST_URL),
+    false,
+  )
+  assert.equal(
+    isIndieHackersPublishedPostUrl('https://www.indiehackers.com/products'),
     false,
   )
 })
