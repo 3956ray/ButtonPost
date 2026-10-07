@@ -104,3 +104,8 @@ ButtonPost's architecture is informed by Postiz and Wechatsync. See [`docs/upstr
 ## License
 
 AGPL-3.0. See [`LICENSE`](LICENSE).
+
+
+### Publish safety gate
+
+The **Publish key** is required before any **Publish everywhere** action, including Local Runner-only destinations. For local browser publishers it is only a UI authorization/safety gate and is not sent to the Local Runner; X / DEV and server media continue to validate/use it on the server.
