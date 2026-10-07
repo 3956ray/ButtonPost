@@ -28,10 +28,10 @@ type ApiResponse = {
   error?: string
 }
 
-type DestinationId = PlatformId | 'xiaohongshu' | 'jike'
+type DestinationId = PlatformId | 'xiaohongshu' | 'jike' | 'learnblockchain'
 
 type LocalPublishResult = {
-  platform: 'xiaohongshu' | 'jike'
+  platform: 'xiaohongshu' | 'jike' | 'learnblockchain'
   status: 'published' | 'reviewing' | 'failed' | 'skipped'
   externalId?: string
   externalUrl?: string
@@ -45,6 +45,8 @@ type LocalRunnerResponse = {
   status?: string
   message?: string
   error?: string
+  externalId?: string
+  externalUrl?: string
 }
 
 type LoopbackRequestInit = RequestInit & {
@@ -55,6 +57,7 @@ const RUNNER_URL_KEY = 'buttonpost.runner.url'
 const RUNNER_TOKEN_KEY = 'buttonpost.runner.token'
 const XHS_ACCOUNT_KEY = 'buttonpost.xiaohongshu.account'
 const JIKE_ACCOUNT_KEY = 'buttonpost.jike.account'
+const LEARNBLOCKCHAIN_ACCOUNT_KEY = 'buttonpost.learnblockchain.account'
 
 function loopbackInit(init: RequestInit = {}): LoopbackRequestInit {
   return { ...init, targetAddressSpace: 'loopback' }
@@ -64,6 +67,7 @@ function platformLabel(id: DisplayPublishResult['platform']) {
   if (id === 'devto') return 'DEV'
   if (id === 'xiaohongshu') return '小红书'
   if (id === 'jike') return '即刻'
+  if (id === 'learnblockchain') return '登链社区'
   return 'X'
 }
 
@@ -445,6 +449,74 @@ export function PublisherForm({ platforms }: Props) {
     }
   }
 
+
+  async function publishLearnBlockchain(): Promise<LocalPublishResult> {
+    const runnerUrl = window.localStorage
+      .getItem(RUNNER_URL_KEY)
+      ?.replace(/\/$/, '')
+    const runnerToken = window.localStorage.getItem(RUNNER_TOKEN_KEY)
+    const account =
+      window.localStorage.getItem(LEARNBLOCKCHAIN_ACCOUNT_KEY) || 'default'
+
+    if (!runnerUrl || !runnerToken) {
+      return {
+        platform: 'learnblockchain',
+        status: 'failed',
+        error:
+          'Connect the ButtonPost Local Runner before publishing to LearnBlockchain.',
+      }
+    }
+
+    const form = new FormData()
+    form.append('account', account)
+    form.append('title', title.trim())
+    form.append('content', content)
+    for (const image of images) form.append('images', image, image.name)
+
+    try {
+      const response = await fetch(
+        runnerUrl + '/v1/platforms/learnblockchain/publish-article',
+        loopbackInit({
+          method: 'POST',
+          headers: {
+            Authorization: 'Bearer ' + runnerToken,
+          },
+          body: form,
+          cache: 'no-store',
+        }),
+      )
+      const data = (await response.json().catch(() => ({}))) as LocalRunnerResponse
+
+      if (!response.ok || !data.ok || data.status !== 'published') {
+        return {
+          platform: 'learnblockchain',
+          status: 'failed',
+          error:
+            data.error ||
+            data.message ||
+            'The Local Runner could not publish the LearnBlockchain article.',
+        }
+      }
+
+      return {
+        platform: 'learnblockchain',
+        status: 'published',
+        externalId:
+          data.externalId || data.message || 'Published via Local Runner',
+        externalUrl: data.externalUrl,
+      }
+    } catch (cause) {
+      return {
+        platform: 'learnblockchain',
+        status: 'failed',
+        error:
+          cause instanceof Error
+            ? cause.message
+            : 'Could not reach the Local Runner for LearnBlockchain.',
+      }
+    }
+  }
+
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSubmitting(true)
@@ -470,10 +542,14 @@ export function PublisherForm({ platforms }: Props) {
     })
 
     const serverPlatforms = selected.filter(
-      (id): id is PlatformId => id !== 'xiaohongshu' && id !== 'jike',
+      (id): id is PlatformId =>
+        id !== 'xiaohongshu' &&
+        id !== 'jike' &&
+        id !== 'learnblockchain',
     )
     const wantsXiaohongshu = selected.includes('xiaohongshu')
     const wantsJike = selected.includes('jike')
+    const wantsLearnBlockchain = selected.includes('learnblockchain')
 
     if (wantsXiaohongshu) {
       const reviewingResult: LocalPublishResult = {
@@ -492,6 +568,17 @@ export function PublisherForm({ platforms }: Props) {
         status: 'reviewing',
         externalId:
           'ButtonPost will fill the Jike composer. Review circles, text, and images in Chrome, then click Send manually.',
+      }
+      upsertResults([reviewingResult])
+      mergeHistoryResults(historyId, [reviewingResult])
+    }
+
+    if (wantsLearnBlockchain) {
+      const reviewingResult: LocalPublishResult = {
+        platform: 'learnblockchain',
+        status: 'reviewing',
+        externalId:
+          'ButtonPost will open the LearnBlockchain article editor and fill the title, Markdown body, and detected image uploader. Review type, category, tags, cover, visibility, formatting, and images before publishing manually.',
       }
       upsertResults([reviewingResult])
       mergeHistoryResults(historyId, [reviewingResult])
@@ -522,6 +609,15 @@ export function PublisherForm({ platforms }: Props) {
         publishJike().then((jikeResult) => {
           upsertResults([jikeResult])
           mergeHistoryResults(historyId, [jikeResult])
+        }),
+      )
+    }
+
+    if (wantsLearnBlockchain) {
+      tasks.push(
+        publishLearnBlockchain().then((learnBlockchainResult) => {
+          upsertResults([learnBlockchainResult])
+          mergeHistoryResults(historyId, [learnBlockchainResult])
         }),
       )
     }
@@ -592,7 +688,7 @@ export function PublisherForm({ platforms }: Props) {
             onChange={onImagesChange}
           />
           <p className="helper">
-            One source image set. X attaches up to 4 images, DEV stores them in the article, and Xiaohongshu/Jike send them directly to your Local Runner. Up to 9 source images are accepted.
+            One source image set. X attaches up to 4 images, DEV stores them in the article, and Xiaohongshu/Jike/LearnBlockchain send local files directly to your Local Runner. Up to 9 source images are accepted.
           </p>
           {mediaProgress ? <p className="media-progress">{mediaProgress}</p> : null}
           {images.length > 0 ? (
@@ -657,6 +753,21 @@ export function PublisherForm({ platforms }: Props) {
               <span className="platform-note">Local Runner · review before send</span>
             </span>
           </label>
+
+          <label className="platform">
+            <input
+              type="checkbox"
+              checked={selected.includes('learnblockchain')}
+              onChange={() => togglePlatform('learnblockchain')}
+            />
+            <span className="platform-copy">
+              <span className="platform-name">
+                <span className="dot local" />
+                LearnBlockchain · 登链社区
+              </span>
+              <span className="platform-note">Local Runner · article review before publish</span>
+            </span>
+          </label>
         </div>
 
         <div className="secret-wrap">
@@ -671,7 +782,7 @@ export function PublisherForm({ platforms }: Props) {
             placeholder="BUTTONPOST_SECRET"
           />
           <p className="helper">
-            Used for X / DEV publishing and server media uploads. Xiaohongshu and Jike media go only to your Local Runner.
+            Used for X / DEV publishing and server media uploads. Xiaohongshu, Jike, and LearnBlockchain local-browser media go only to your Local Runner.
           </p>
         </div>
 

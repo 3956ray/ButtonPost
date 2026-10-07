@@ -13,6 +13,14 @@ function learnBlockchainLoginTimeoutMs() {
   return normalized * 60 * 1000
 }
 
+function learnBlockchainReviewTimeoutMs() {
+  const minutes = Number(
+    process.env.BUTTONPOST_LBC_REVIEW_TIMEOUT_MINUTES || '30',
+  )
+  const normalized = Number.isFinite(minutes) && minutes > 0 ? minutes : 30
+  return normalized * 60 * 1000
+}
+
 const AUTH_MARKERS = [
   'a:has-text("写文章")',
   'button:has-text("写文章")',
@@ -382,7 +390,440 @@ export async function loginLearnBlockchain(
         authenticated: false,
         status: 'timeout',
         message:
-          'Timed out waiting for the GitHub OAuth flow to return to LearnBlockchain. The browser was kept open for the full login window.',
+          'Timed out waiting for the selected login flow to return to LearnBlockchain. The browser was kept open for the full login window.',
+      }
+    } catch (cause) {
+      throw chromeLaunchError(cause)
+    } finally {
+      await context?.close().catch(() => {})
+    }
+  })
+}
+
+
+const WRITE_LABELS = ['写文章', '发布文章', '投稿']
+
+export function isLearnBlockchainArticleUrl(value) {
+  try {
+    const url = new URL(value)
+    return (
+      isLearnBlockchainSiteUrl(value) &&
+      /^\/article\/\d+(?:\/)?$/.test(url.pathname)
+    )
+  } catch {
+    return false
+  }
+}
+
+export function extractLearnBlockchainArticleId(body) {
+  if (!body || typeof body !== 'object') return null
+
+  for (const candidate of [
+    body.article_id,
+    body.articleId,
+    body.id,
+    body.data?.article_id,
+    body.data?.articleId,
+    body.data?.id,
+  ]) {
+    if (
+      (typeof candidate === 'string' || typeof candidate === 'number') &&
+      String(candidate).trim()
+    ) {
+      return String(candidate).trim()
+    }
+  }
+
+  return null
+}
+
+async function firstVisible(page, selectors, timeoutMs = 12_000) {
+  const deadline = Date.now() + timeoutMs
+
+  while (Date.now() < deadline) {
+    for (const selector of selectors) {
+      const locator = page.locator(selector).first()
+      try {
+        if ((await locator.count()) > 0 && (await locator.isVisible())) {
+          return locator
+        }
+      } catch {
+        // Continue while the editor hydrates.
+      }
+    }
+
+    await sleep(300)
+  }
+
+  return null
+}
+
+async function clickWriteArticle(page, context) {
+  await page.goto(LBC_URL, {
+    waitUntil: 'domcontentloaded',
+    timeout: 30_000,
+  })
+  await page.waitForTimeout(1_500)
+
+  for (const label of WRITE_LABELS) {
+    const locator = page.getByText(label, { exact: true }).first()
+    try {
+      if ((await locator.count()) === 0 || !(await locator.isVisible())) continue
+
+      const href = await locator.getAttribute('href').catch(() => null)
+      if (href) {
+        await page.goto(new URL(href, page.url()).toString(), {
+          waitUntil: 'domcontentloaded',
+          timeout: 30_000,
+        })
+        return page
+      }
+
+      const before = new Set(context.pages())
+      await locator.click()
+      await sleep(1_200)
+
+      const opened = context
+        .pages()
+        .find((candidate) => !before.has(candidate) && !candidate.isClosed())
+
+      return opened || page
+    } catch {
+      // Try the next visible label.
+    }
+  }
+
+  throw new Error(
+    'ButtonPost could not find the LearnBlockchain "写文章" action. Open the site once and confirm the signed-in account can create articles.',
+  )
+}
+
+async function findArticleEditorPage(context, preferredPage) {
+  const deadline = Date.now() + 20_000
+
+  while (Date.now() < deadline) {
+    const pages = [
+      preferredPage,
+      ...context.pages().filter((page) => page !== preferredPage),
+    ].filter((page) => page && !page.isClosed() && isLearnBlockchainSiteUrl(page.url()))
+
+    for (const page of pages) {
+      const title = await firstVisible(
+        page,
+        [
+          'input[name="title"]',
+          'input[placeholder*="标题"]',
+          'textarea[placeholder*="标题"]',
+          'input[id*="title" i]',
+        ],
+        500,
+      )
+
+      const content = await firstVisible(
+        page,
+        [
+          'textarea[name="content"]',
+          'textarea[placeholder*="Markdown" i]',
+          'textarea[placeholder*="正文"]',
+          'textarea[placeholder*="内容"]',
+          '.cm-content[contenteditable="true"]',
+          '.CodeMirror',
+          '.CodeMirror textarea',
+          '[contenteditable="true"]',
+        ],
+        500,
+      )
+
+      if (title && content) return { page, title, content }
+    }
+
+    await sleep(500)
+  }
+
+  throw new Error(
+    'LearnBlockchain article editor opened, but ButtonPost could not find both the title and Markdown body fields.',
+  )
+}
+
+async function fillEditorLocator(locator, value) {
+  const codeMirrorFilled = await locator
+    .evaluate((element, text) => {
+      const own = element.CodeMirror
+      const parent = element.closest?.('.CodeMirror')?.CodeMirror
+      const editor = own || parent
+
+      if (editor && typeof editor.setValue === 'function') {
+        editor.setValue(text)
+        editor.focus?.()
+        return true
+      }
+
+      return false
+    }, value)
+    .catch(() => false)
+
+  if (codeMirrorFilled) return
+
+  await locator.fill(value)
+}
+
+async function uploadLearnBlockchainImages(page, imagePaths) {
+  if (!imagePaths.length) return { uploaded: 0, warning: null }
+
+  const imageInput = page
+    .locator(
+      'input[type="file"][accept*="image"], input[type="file"]',
+    )
+    .first()
+
+  if ((await imageInput.count()) === 0) {
+    return {
+      uploaded: 0,
+      warning:
+        'ButtonPost filled the article text, but could not detect LearnBlockchain image upload controls. Add the selected images manually before publishing.',
+    }
+  }
+
+  let uploaded = 0
+  const multiple = (await imageInput.getAttribute('multiple')) !== null
+
+  try {
+    if (multiple) {
+      await imageInput.setInputFiles(imagePaths)
+      uploaded = imagePaths.length
+      await sleep(2_000)
+    } else {
+      for (const imagePath of imagePaths) {
+        await imageInput.setInputFiles(imagePath)
+        uploaded += 1
+        await sleep(1_000)
+      }
+    }
+
+    return { uploaded, warning: null }
+  } catch {
+    return {
+      uploaded,
+      warning:
+        'LearnBlockchain image upload controls changed while filling the article. Review the editor and add any missing images manually.',
+    }
+  }
+}
+
+async function waitForLearnBlockchainPublishResponse(page, timeoutMs) {
+  try {
+    const response = await page.waitForResponse(
+      (candidate) => {
+        try {
+          const request = candidate.request()
+          const url = new URL(candidate.url())
+          return (
+            request.method() === 'POST' &&
+            isLearnBlockchainSiteUrl(candidate.url()) &&
+            url.pathname === '/api/post/article'
+          )
+        } catch {
+          return false
+        }
+      },
+      { timeout: timeoutMs },
+    )
+
+    let body = null
+    try {
+      body = await response.json()
+    } catch {
+      // Fall through to URL-based confirmation when the response shape changes.
+    }
+
+    const articleId = extractLearnBlockchainArticleId(body)
+    const businessOk =
+      body === null ||
+      body.code === undefined ||
+      Number(body.code) === 0
+
+    if (!response.ok() || !businessOk) {
+      return {
+        ok: false,
+        status: 'failed',
+        message:
+          body?.message ||
+          body?.error ||
+          'LearnBlockchain rejected the article publish request.',
+      }
+    }
+
+    if (articleId) {
+      return {
+        ok: true,
+        status: 'published',
+        externalId: articleId,
+        externalUrl: `https://learnblockchain.cn/article/${articleId}`,
+        message: 'LearnBlockchain confirmed the article publish request.',
+      }
+    }
+
+    return {
+      ok: true,
+      status: 'published',
+      message:
+        'LearnBlockchain accepted the article publish request. No article id was present in the response.',
+    }
+  } catch {
+    return null
+  }
+}
+
+async function waitForLearnBlockchainArticleUrl(context, timeoutMs) {
+  const deadline = Date.now() + timeoutMs
+
+  while (Date.now() < deadline) {
+    for (const page of activePages(context)) {
+      const url = page.url()
+      if (!isLearnBlockchainArticleUrl(url)) continue
+
+      const match = new URL(url).pathname.match(/^\/article\/(\d+)/)
+      const articleId = match?.[1]
+
+      return {
+        ok: true,
+        status: 'published',
+        ...(articleId ? { externalId: articleId } : {}),
+        externalUrl: url,
+        message: 'LearnBlockchain navigated to the published article.',
+      }
+    }
+
+    if (activePages(context).length === 0) {
+      return {
+        ok: false,
+        status: 'cancelled',
+        message:
+          'All LearnBlockchain review windows were closed before publication was confirmed.',
+      }
+    }
+
+    await sleep(750)
+  }
+
+  return {
+    ok: false,
+    status: 'timeout',
+    message:
+      'Timed out waiting for LearnBlockchain publication confirmation. The article may still be open or already published; check the site before retrying to avoid duplicates.',
+  }
+}
+
+export async function publishLearnBlockchainArticle({
+  account = 'default',
+  title,
+  content,
+  imagePaths = [],
+}) {
+  const accountName = normalizeLearnBlockchainAccountName(account)
+  const userDataDir = learnBlockchainProfileDir(accountName)
+  const normalizedTitle = String(title || '').trim()
+  const normalizedContent = String(content || '').trim()
+  const normalizedImages = Array.isArray(imagePaths)
+    ? imagePaths.filter(Boolean).slice(0, 9)
+    : []
+
+  if (!normalizedTitle || !normalizedContent) {
+    return {
+      ok: false,
+      platform: 'learnblockchain',
+      status: 'failed',
+      message: 'LearnBlockchain requires both a title and article body.',
+    }
+  }
+
+  if (!(await profileExists(userDataDir))) {
+    return {
+      ok: false,
+      platform: 'learnblockchain',
+      status: 'auth_required',
+      message: 'Connect LearnBlockchain before publishing.',
+    }
+  }
+
+  return withOperation('LearnBlockchain article publishing', async () => {
+    let context
+
+    try {
+      context = await chromium.launchPersistentContext(userDataDir, {
+        channel: 'chrome',
+        headless: false,
+        viewport: null,
+      })
+
+      let page = context.pages()[0] || (await context.newPage())
+      const authenticated = await verifyAuthenticated(page)
+
+      if (!authenticated) {
+        return {
+          ok: false,
+          platform: 'learnblockchain',
+          status: 'auth_required',
+          message:
+            'LearnBlockchain login is missing or expired. Reconnect the account and retry.',
+        }
+      }
+
+      page = await clickWriteArticle(page, context)
+      const editor = await findArticleEditorPage(context, page)
+      page = editor.page
+
+      await fillEditorLocator(editor.title, normalizedTitle)
+      await fillEditorLocator(editor.content, normalizedContent)
+
+      const media = await uploadLearnBlockchainImages(
+        page,
+        normalizedImages,
+      )
+
+      const timeoutMs = learnBlockchainReviewTimeoutMs()
+      console.log('')
+      console.log('LearnBlockchain review mode')
+      console.log('  ButtonPost filled the article title and Markdown body.')
+      if (media.uploaded) {
+        console.log('  Uploaded local images: ' + media.uploaded)
+      }
+      if (media.warning) {
+        console.log('  Media warning: ' + media.warning)
+      }
+      console.log('  Review article type, category, tags, cover, images,')
+      console.log('  formatting, visibility, and any platform-required fields.')
+      console.log('  Click the final Publish button manually when ready.')
+      console.log(
+        '  Waiting up to ' + Math.round(timeoutMs / 60000) + ' minutes...',
+      )
+      console.log('')
+
+      const networkConfirmation = waitForLearnBlockchainPublishResponse(
+        page,
+        timeoutMs,
+      )
+      const urlConfirmation = waitForLearnBlockchainArticleUrl(
+        context,
+        timeoutMs,
+      )
+
+      const result = await Promise.race([
+        networkConfirmation.then((value) => value || urlConfirmation),
+        urlConfirmation,
+      ])
+
+      return {
+        ...result,
+        platform: 'learnblockchain',
+        ...(media.warning && result.ok
+          ? {
+              message:
+                (result.message || 'LearnBlockchain article published.') +
+                ' ' +
+                media.warning,
+            }
+          : {}),
       }
     } catch (cause) {
       throw chromeLaunchError(cause)

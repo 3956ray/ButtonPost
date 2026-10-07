@@ -5,7 +5,7 @@
 | X | 1 | Official API + X Media | Markdown -> plain text; up to 4 source images | Implemented |
 | DEV Community | 1 | Official Forem API + public Blob URLs | Markdown preserved; source images appended; first image as cover | Implemented |
 | 即刻 | 1 | Local Runner + Patchright | Markdown -> plain text; optional JPEG/PNG images; manual review/send | Implemented and production-verified |
-| 登链社区 | 1 | Local Runner + Patchright | Markdown article editor; local session | Auth implemented; editor/publish next |
+| 登链社区 | 1 | Local Runner + Patchright | Title + Markdown article; local image upload when detectable; manual final review | Implemented (review publish MVP; needs production verification) |
 | Indie Hackers | 1 | Browser-assisted | Editor compatibility | Planned |
 | Bonjorr | 1 | Unconfirmed | TBD after exact platform is confirmed | Blocked on platform identity |
 | 微信公众号 | 2 | Browser adapter | HTML-compatible article | Planned |
