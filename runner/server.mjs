@@ -17,8 +17,12 @@ import {
   loginLearnBlockchain,
   publishLearnBlockchainArticle,
 } from './adapters/learnblockchain.mjs'
+import {
+  getIndieHackersStatus,
+  loginIndieHackers,
+} from './adapters/indiehackers.mjs'
 
-const VERSION = '0.7.3'
+const VERSION = '0.8.0'
 const host = process.env.BUTTONPOST_RUNNER_HOST || '127.0.0.1'
 const port = Number(process.env.BUTTONPOST_RUNNER_PORT || '27123')
 const token = process.env.BUTTONPOST_RUNNER_TOKEN || randomBytes(24).toString('base64url')
@@ -78,7 +82,7 @@ const server = createServer(async (req, res) => {
         name: 'ButtonPost Local Runner',
         version: VERSION,
         status: 'ready',
-        capabilities: ['xiaohongshu:auth', 'xiaohongshu:note', 'jike:auth', 'jike:post', 'learnblockchain:auth', 'learnblockchain:article'],
+        capabilities: ['xiaohongshu:auth', 'xiaohongshu:note', 'jike:auth', 'jike:post', 'learnblockchain:auth', 'learnblockchain:article', 'indiehackers:auth'],
       },
       cors,
     )
@@ -261,6 +265,35 @@ const server = createServer(async (req, res) => {
     }
   }
 
+  if (
+    req.method === 'GET' &&
+    requestUrl.pathname === '/v1/platforms/indiehackers/status'
+  ) {
+    try {
+      const result = await getIndieHackersStatus(
+        requestUrl.searchParams.get('account') || 'default',
+      )
+      return sendJson(res, result.ok ? 200 : 409, result, cors)
+    } catch (cause) {
+      return sendJson(res, 500, errorBody(cause), cors)
+    }
+  }
+
+  if (
+    req.method === 'POST' &&
+    requestUrl.pathname === '/v1/platforms/indiehackers/login'
+  ) {
+    try {
+      const body = await readJson(req)
+      const result = await loginIndieHackers(
+        typeof body.account === 'string' ? body.account : 'default',
+      )
+      return sendJson(res, result.ok ? 200 : 409, result, cors)
+    } catch (cause) {
+      return sendJson(res, 500, errorBody(cause), cors)
+    }
+  }
+
   if (req.method === 'POST' && requestUrl.pathname === '/v1/publish') {
     return sendJson(
       res,
@@ -282,7 +315,7 @@ server.listen(port, host, () => {
   console.log('  URL:     http://' + host + ':' + port)
   console.log('  Token:   ' + token)
   console.log('  Allowed origins: ' + [...allowedOrigins].join(', '))
-  console.log('  Capabilities: Xiaohongshu auth + image-note publishing; Jike auth + review publishing; LearnBlockchain auth + article review publishing')
+  console.log('  Capabilities: Xiaohongshu auth + image-note publishing; Jike auth + review publishing; LearnBlockchain auth + article review publishing; Indie Hackers auth')
   console.log('')
   console.log('Keep this terminal open while ButtonPost uses local browser publishers.')
   console.log('The token stays on your machine; paste it into ButtonPost only when pairing.')
