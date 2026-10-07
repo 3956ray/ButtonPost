@@ -266,7 +266,7 @@ export function LocalRunnerCard() {
     <section className="runner-card">
       <div className="runner-heading">
         <div>
-          <span className="eyebrow">Phase 3</span>
+          <span className="eyebrow">Phase 4</span>
           <h2>Local Runner</h2>
           <p>
             Connect ButtonPost to this computer for platforms that need your browser session, local media, or QR login.
