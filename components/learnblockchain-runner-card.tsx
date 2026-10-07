@@ -158,7 +158,7 @@ export function LearnBlockchainRunnerCard({
     setAccount(normalizedAccount)
     setState('login')
     setMessage(
-      'A local Chrome window is opening. Complete LearnBlockchain login there; ButtonPost is waiting for confirmation.',
+      'A local Chrome window is opening. Choose GitHub, MetaMask, email/password, phone, or WeChat login there; ButtonPost will wait for the final LearnBlockchain session.',
     )
 
     try {
@@ -264,6 +264,9 @@ export function LearnBlockchainRunnerCard({
       </p>
       <p className="runner-privacy">
         Login runs in a dedicated local Chrome profile under <code>~/.buttonpost</code>.
+        GitHub, email/password, phone and WeChat can be completed directly there. MetaMask
+        requires MetaMask to be installed/unlocked in this dedicated profile once. ButtonPost
+        never reads passwords, verification codes, seed phrases, private keys, or wallet signatures.
         Nothing is published during this step.
       </p>
     </div>
