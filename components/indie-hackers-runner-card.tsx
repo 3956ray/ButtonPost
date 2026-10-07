@@ -15,6 +15,7 @@ type PlatformState =
 type PlatformAuthResponse = {
   ok?: boolean
   authenticated?: boolean
+  postingAllowed?: boolean
   status?: string
   message?: string
   error?: string
@@ -119,7 +120,12 @@ export function IndieHackersRunnerCard({
         window.localStorage.setItem(STORAGE_ACCOUNT, normalizedAccount)
         setAccount(normalizedAccount)
         setState('connected')
-        setMessage(data.message || 'Indie Hackers login is valid.')
+        setMessage(
+          data.message ||
+            (data.postingAllowed === false
+              ? 'Indie Hackers login is valid, but posting access is not available yet.'
+              : 'Indie Hackers login is valid.'),
+        )
         return
       }
 
@@ -174,7 +180,12 @@ export function IndieHackersRunnerCard({
 
       if (response.ok && data.authenticated) {
         setState('connected')
-        setMessage(data.message || 'Indie Hackers is connected.')
+        setMessage(
+          data.message ||
+            (data.postingAllowed === false
+              ? 'Indie Hackers is connected, but posting access is not available yet.'
+              : 'Indie Hackers is connected.'),
+        )
         return
       }
 
@@ -261,7 +272,9 @@ export function IndieHackersRunnerCard({
       <p className="runner-privacy">
         Sign-in runs only in a dedicated local Chrome profile under <code>~/.buttonpost</code>.
         Enter your Indie Hackers credentials directly on indiehackers.com; ButtonPost does not
-        read or store the password. Nothing is published during this step.
+        read or store the password. Login and posting permission are checked separately because
+        Indie Hackers may allow an account to sign in before it is allowed to create posts.
+        Nothing is published during this step.
       </p>
     </div>
   )
