@@ -13,7 +13,7 @@ import {
   loginLearnBlockchain,
 } from './adapters/learnblockchain.mjs'
 
-const VERSION = '0.6.0'
+const VERSION = '0.6.1'
 const host = process.env.BUTTONPOST_RUNNER_HOST || '127.0.0.1'
 const port = Number(process.env.BUTTONPOST_RUNNER_PORT || '27123')
 const token = process.env.BUTTONPOST_RUNNER_TOKEN || randomBytes(24).toString('base64url')
