@@ -4,6 +4,7 @@ import path from 'node:path'
 import test from 'node:test'
 import {
   extractLearnBlockchainArticleId,
+  extractLearnBlockchainImageUrl,
   isLearnBlockchainArticleUrl,
   isLearnBlockchainLoginUrl,
   isLearnBlockchainSiteUrl,
@@ -87,4 +88,24 @@ test('extracts LearnBlockchain article ids from publish responses', () => {
   )
   assert.equal(extractLearnBlockchainArticleId({ articleId: '789' }), '789')
   assert.equal(extractLearnBlockchainArticleId({ code: 0 }), null)
+})
+
+
+test('extracts LearnBlockchain CDN image URLs from upload responses', () => {
+  assert.equal(
+    extractLearnBlockchainImageUrl({
+      url: 'https://img.learnblockchain.cn/attachments/2026/10/example.png',
+    }),
+    'https://img.learnblockchain.cn/attachments/2026/10/example.png',
+  )
+  assert.equal(
+    extractLearnBlockchainImageUrl(
+      '{"path":"attachments/2026/10/example.jpg"}',
+    ),
+    'https://img.learnblockchain.cn/attachments/2026/10/example.jpg',
+  )
+  assert.equal(
+    extractLearnBlockchainImageUrl('{"ok":true}'),
+    null,
+  )
 })
