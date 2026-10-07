@@ -14,6 +14,7 @@ type Props = {
 function platformLabel(platform: PublicationHistoryResult['platform']) {
   if (platform === 'devto') return 'DEV'
   if (platform === 'xiaohongshu') return '小红书'
+  if (platform === 'jike') return '即刻'
   return 'X'
 }
 

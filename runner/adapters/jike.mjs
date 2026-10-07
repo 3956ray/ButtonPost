@@ -4,6 +4,7 @@ import path from 'node:path'
 import { chromium } from 'patchright'
 
 const JIKE_URL = 'https://web.okjike.com/'
+const JIKE_COMPOSE_URL = 'https://web.okjike.com/following'
 
 const AUTH_MARKERS = [
   'button[class*="compose"]',
@@ -260,6 +261,282 @@ export async function loginJike(
         authenticated: false,
         status: 'timeout',
         message: 'Timed out waiting for Jike login.',
+      }
+    } catch (cause) {
+      throw chromeLaunchError(cause)
+    } finally {
+      await context?.close().catch(() => {})
+    }
+  })
+}
+
+
+function jikeReviewTimeoutMs() {
+  const minutes = Number(process.env.BUTTONPOST_JIKE_REVIEW_TIMEOUT_MINUTES || '30')
+  const normalized = Number.isFinite(minutes) && minutes > 0 ? minutes : 30
+  return normalized * 60 * 1000
+}
+
+async function findJikeComposer(page) {
+  await page.goto(JIKE_COMPOSE_URL, {
+    waitUntil: 'domcontentloaded',
+    timeout: 30_000,
+  })
+  await page.waitForTimeout(2_000)
+
+  let form = page.locator('[class*="_postForm_"]').first()
+  if ((await form.count()) === 0) {
+    const editor = page.locator('[contenteditable="true"]').first()
+    await editor.waitFor({ state: 'visible', timeout: 20_000 })
+    form = page.locator('body')
+  }
+
+  const editor = form.locator('[contenteditable="true"]').first()
+  await editor.waitFor({ state: 'visible', timeout: 20_000 })
+
+  return { form, editor }
+}
+
+async function replaceJikeEditorText(editor, text) {
+  await editor.evaluate((box, value) => {
+    box.focus()
+
+    const selection = window.getSelection()
+    const range = document.createRange()
+    range.selectNodeContents(box)
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+
+    box.dispatchEvent(
+      new InputEvent('beforeinput', {
+        inputType: 'deleteContentBackward',
+        bubbles: true,
+        cancelable: true,
+      }),
+    )
+
+    const data = new DataTransfer()
+    data.setData('text/plain', value)
+    box.dispatchEvent(
+      new ClipboardEvent('paste', {
+        clipboardData: data,
+        bubbles: true,
+        cancelable: true,
+      }),
+    )
+  }, text)
+
+  const deadline = Date.now() + 10_000
+  while (Date.now() < deadline) {
+    const current = ((await editor.textContent().catch(() => '')) || '').trim()
+    if (current.length > 0) return
+    await sleep(300)
+  }
+
+  throw new Error('Jike editor did not accept the source text.')
+}
+
+async function uploadJikeImages(form, imagePaths) {
+  let uploaded = 0
+
+  for (const imagePath of imagePaths) {
+    const input = form.locator('input[type="file"]').first()
+    await input.waitFor({ state: 'attached', timeout: 20_000 })
+    await input.setInputFiles(imagePath)
+
+    const deadline = Date.now() + 30_000
+    let observed = false
+
+    while (Date.now() < deadline) {
+      const count = await form.locator('img[src^="blob:"]').count().catch(() => 0)
+      if (count > uploaded) {
+        uploaded = count
+        observed = true
+        break
+      }
+      await sleep(500)
+    }
+
+    if (!observed) {
+      throw new Error('Jike image preview did not appear after upload.')
+    }
+  }
+}
+
+async function waitForJikeManualPublish(page, sourceText, timeoutMs) {
+  const snippet = sourceText.replace(/\s+/g, ' ').trim().slice(0, 24)
+  const deadline = Date.now() + timeoutMs
+
+  while (Date.now() < deadline) {
+    if (page.isClosed()) {
+      return {
+        ok: false,
+        status: 'cancelled',
+        message: 'The Jike review window was closed before publishing completed.',
+      }
+    }
+
+    const editor = page
+      .locator('[class*="_postForm_"] [contenteditable="true"]')
+      .first()
+    const editorText = (
+      (await editor.textContent().catch(() => '')) || ''
+    ).trim()
+
+    if (!editorText) {
+      const appeared =
+        snippet.length < 8
+          ? true
+          : await page.evaluate((expected) => {
+              const form = document.querySelector('[class*="_postForm_"]')
+              const normalize = (value) =>
+                String(value || '')
+                  .replace(/\s+/g, ' ')
+                  .trim()
+
+              return Array.from(
+                document.querySelectorAll('article, div, p'),
+              ).some((element) => {
+                if (form?.contains(element)) return false
+                return normalize(element.textContent).includes(expected)
+              })
+            }, snippet)
+
+      if (appeared) {
+        const externalUrl = await page
+          .evaluate((expected) => {
+            const form = document.querySelector('[class*="_postForm_"]')
+            const normalize = (value) =>
+              String(value || '')
+                .replace(/\s+/g, ' ')
+                .trim()
+
+            const links = Array.from(
+              document.querySelectorAll('a[href*="/originalPost/"]'),
+            )
+
+            const match = links.find((link) => {
+              if (form?.contains(link)) return false
+              const container =
+                link.closest('article') ||
+                link.parentElement?.parentElement ||
+                link.parentElement
+              return normalize(container?.textContent).includes(expected)
+            })
+
+            return match instanceof HTMLAnchorElement ? match.href : null
+          }, snippet)
+          .catch(() => null)
+
+        return {
+          ok: true,
+          status: 'published',
+          message: 'Jike post published after manual review.',
+          ...(externalUrl ? { externalUrl } : {}),
+        }
+      }
+    }
+
+    await sleep(1_000)
+  }
+
+  return {
+    ok: false,
+    status: 'timeout',
+    message:
+      'Timed out waiting for manual Jike publish confirmation. The editor was left open for review.',
+  }
+}
+
+export async function publishJikePost({
+  account = 'default',
+  content,
+  imagePaths = [],
+}) {
+  const accountName = normalizeJikeAccountName(account)
+  const userDataDir = jikeProfileDir(accountName)
+  const normalizedContent = String(content || '').trim()
+  const normalizedImages = Array.isArray(imagePaths)
+    ? imagePaths.filter(Boolean).slice(0, 9)
+    : []
+
+  if (!normalizedContent) {
+    return {
+      ok: false,
+      platform: 'jike',
+      status: 'failed',
+      message: 'Jike requires post content.',
+    }
+  }
+
+  if (!(await profileExists(userDataDir))) {
+    return {
+      ok: false,
+      platform: 'jike',
+      status: 'auth_required',
+      message: 'Connect Jike before publishing.',
+    }
+  }
+
+  return withOperation('Jike post publishing', async () => {
+    let context
+
+    try {
+      context = await chromium.launchPersistentContext(userDataDir, {
+        channel: 'chrome',
+        headless: false,
+        viewport: null,
+      })
+
+      const page = context.pages()[0] || (await context.newPage())
+      const authenticated = await verifyAuthenticated(page)
+
+      if (!authenticated) {
+        return {
+          ok: false,
+          platform: 'jike',
+          status: 'auth_required',
+          message: 'Jike login is missing or expired. Reconnect the account and retry.',
+        }
+      }
+
+      const { form, editor } = await findJikeComposer(page)
+      await replaceJikeEditorText(editor, normalizedContent)
+
+      if (normalizedImages.length) {
+        await uploadJikeImages(form, normalizedImages)
+      }
+
+      const sendButton = form.getByRole('button', { name: '发送', exact: true }).first()
+      await sendButton.waitFor({ state: 'visible', timeout: 20_000 })
+
+      const enableDeadline = Date.now() + 10_000
+      while (Date.now() < enableDeadline && (await sendButton.isDisabled().catch(() => true))) {
+        await sleep(300)
+      }
+
+      if (await sendButton.isDisabled().catch(() => true)) {
+        throw new Error('Jike send button is still disabled after filling the post.')
+      }
+
+      const timeoutMs = jikeReviewTimeoutMs()
+      console.log('')
+      console.log('Jike review mode')
+      console.log('  ButtonPost filled the text and selected images.')
+      console.log('  Review circles, text, images, and formatting in Chrome.')
+      console.log('  Click Send manually when ready.')
+      console.log('  Waiting up to ' + Math.round(timeoutMs / 60000) + ' minutes...')
+      console.log('')
+
+      const result = await waitForJikeManualPublish(
+        page,
+        normalizedContent,
+        timeoutMs,
+      )
+
+      return {
+        ...result,
+        platform: 'jike',
       }
     } catch (cause) {
       throw chromeLaunchError(cause)

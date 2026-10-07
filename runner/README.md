@@ -11,6 +11,7 @@ Phase 2 starts with a deliberately small contract:
 - `POST /v1/platforms/xiaohongshu/publish-note` — receive title/body/images from ButtonPost Web and publish through the local Chrome profile.
 - `GET /v1/platforms/jike/status` — validate a locally stored Jike login.
 - `POST /v1/platforms/jike/login` — open Jike Web in local Chrome and wait for interactive login.
+- `POST /v1/platforms/jike/publish-post` — fill the Jike composer, upload optional JPEG/PNG images, then wait for manual Send.
 - `POST /v1/publish` — reserved for future generic local routing.
 
 ## Start
@@ -118,4 +119,23 @@ In ButtonPost Web:
 5. ButtonPost closes the login window only after a positive logged-in UI marker is detected;
 6. use **Check login** to validate the saved session later.
 
-This step does not publish anything. Jike post composition/publishing is the next increment.
+## Jike publishing
+
+Select **Jike · 即刻** in ButtonPost and click **Publish everywhere**.
+
+ButtonPost:
+
+1. opens the saved Jike profile at `https://web.okjike.com/following`;
+2. writes the same normalized source text into Jike's Lexical `contenteditable` using a synthetic paste event so paragraph breaks are preserved;
+3. uploads selected JPEG/PNG images directly through the Local Runner (up to 9);
+4. leaves Chrome open so you can select a circle and review text/images;
+5. waits for **you** to click Jike's **发送** button;
+6. detects the composer clearing and the new post appearing, then returns `published` and updates Publication History.
+
+The default review window is 30 minutes. Configure it with:
+
+```bash
+BUTTONPOST_JIKE_REVIEW_TIMEOUT_MINUTES=30
+```
+
+Jike publishing never sends its browser session or local image files through Vercel.
