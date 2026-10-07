@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { JikeRunnerCard } from '@/components/jike-runner-card'
 import { LearnBlockchainRunnerCard } from '@/components/learnblockchain-runner-card'
+import { IndieHackersRunnerCard } from '@/components/indie-hackers-runner-card'
 
 const DEFAULT_RUNNER_URL = 'http://127.0.0.1:27123'
 const STORAGE_URL = 'buttonpost.runner.url'
@@ -266,7 +267,7 @@ export function LocalRunnerCard() {
     <section className="runner-card">
       <div className="runner-heading">
         <div>
-          <span className="eyebrow">Phase 4</span>
+          <span className="eyebrow">Phase 5</span>
           <h2>Local Runner</h2>
           <p>
             Connect ButtonPost to this computer for platforms that need your browser session, local media, or QR login.
@@ -378,6 +379,14 @@ export function LocalRunnerCard() {
         runnerToken={runnerToken}
         runnerConnected={state === 'connected'}
         runnerSupported={capabilities.includes('learnblockchain:auth')}
+        runnerVersion={version}
+      />
+
+      <IndieHackersRunnerCard
+        runnerUrl={runnerUrl}
+        runnerToken={runnerToken}
+        runnerConnected={state === 'connected'}
+        runnerSupported={capabilities.includes('indiehackers:auth')}
         runnerVersion={version}
       />
     </section>
