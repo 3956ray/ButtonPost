@@ -14,6 +14,7 @@ Phase 2 starts with a deliberately small contract:
 - `POST /v1/platforms/jike/publish-post` — fill the Jike composer, upload optional JPEG/PNG images, then wait for manual Send.
 - `GET /v1/platforms/learnblockchain/status` — validate a locally stored LearnBlockchain login.
 - `POST /v1/platforms/learnblockchain/login` — open 登链社区 in local Chrome and wait for interactive login.
+- `POST /v1/platforms/learnblockchain/publish-article` — open the signed-in article editor, fill title/Markdown/images when detected, then wait for manual publish.
 - `POST /v1/publish` — reserved for future generic local routing.
 
 ## Start
@@ -179,3 +180,30 @@ LearnBlockchain's GitHub sign-in can navigate through or replace several browser
 - after confirmation, ButtonPost waits briefly for cookies/session storage to settle before closing Chrome.
 
 The default login window is 15 minutes and can be changed with `BUTTONPOST_LBC_LOGIN_TIMEOUT_MINUTES`.
+
+
+## LearnBlockchain article publishing
+
+Runner v0.7.0 adds the first article-publishing MVP for 登链社区.
+
+ButtonPost does not hard-code an editor URL. It opens the signed-in LearnBlockchain home page and follows the visible **写文章 / 发布文章 / 投稿** action so route changes are less brittle.
+
+The flow is:
+
+1. verify the saved LearnBlockchain session;
+2. open the site's article editor;
+3. fill the source title without rewriting it;
+4. fill the original Markdown source;
+5. if an image file input is detected, upload the selected local source images directly from the Local Runner;
+6. leave article type, category, tags, cover, visibility, formatting, and final review to the user;
+7. wait for the user to click the final Publish action;
+8. primarily confirm success from `POST /api/post/article`; fall back to navigation to `/article/<id>`;
+9. return the article id/URL to ButtonPost Publication History when available.
+
+The default review window is 30 minutes:
+
+```bash
+BUTTONPOST_LBC_REVIEW_TIMEOUT_MINUTES=30
+```
+
+If the current LearnBlockchain editor no longer exposes a detectable image file input, ButtonPost keeps the text/title filled and explicitly asks the user to add the selected images manually before the final publish. The publish action is never clicked automatically in this MVP.
