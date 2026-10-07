@@ -350,6 +350,61 @@ button, input, textarea { font: inherit; }
   font-size: 13px;
   line-height: 1.55;
 }
+
+.history-filters {
+  display: flex;
+  gap: 7px;
+  margin-top: 17px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+}
+.history-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: white;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+}
+.history-filter strong {
+  display: grid;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 9px;
+}
+.history-filter.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+.history-filter.active strong {
+  background: rgba(255, 255, 255, .16);
+  color: white;
+}
+.history-view-context {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 13px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.history-view-context strong {
+  color: var(--text);
+  font-size: 13px;
+}
 .history-clear,
 .history-reuse {
   border: 0;
@@ -402,12 +457,88 @@ button, input, textarea { font: inherit; }
   text-transform: uppercase;
   letter-spacing: .045em;
 }
+.history-item-actions {
+  display: flex;
+  gap: 7px;
+  flex: 0 0 auto;
+}
+.history-details,
 .history-reuse {
   flex: 0 0 auto;
   padding: 8px 11px;
+  border: 0;
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 750;
+}
+.history-details {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.history-reuse {
   background: var(--accent);
   color: white;
-  font-size: 11px;
+}
+
+.history-platforms {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  margin-top: 11px;
+}
+.history-platforms-label {
+  padding-top: 6px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+.history-platform-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.history-platform-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #faf9f5;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 750;
+}
+.history-platform-chip:hover {
+  border-color: #a6a39a;
+}
+.history-platform-chip.active {
+  box-shadow: inset 0 0 0 1px var(--text);
+}
+.history-platform-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--muted);
+}
+.history-platform-chip.published .history-platform-chip-dot,
+.history-platform-chip.draft .history-platform-chip-dot {
+  background: var(--success);
+}
+.history-platform-chip.reviewing .history-platform-chip-dot,
+.history-platform-chip.pending .history-platform-chip-dot {
+  background: var(--warning);
+}
+.history-platform-chip.failed .history-platform-chip-dot {
+  background: var(--danger);
+}
+.history-platform-chip.skipped .history-platform-chip-dot {
+  background: var(--muted);
 }
 .history-preview {
   margin: 10px 0 0;
@@ -421,6 +552,19 @@ button, input, textarea { font: inherit; }
   color: var(--muted);
   font-size: 10px;
   overflow-wrap: anywhere;
+}
+.history-detail-panel {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.history-detail-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 10px;
 }
 .history-results {
   display: grid;
@@ -458,6 +602,16 @@ button, input, textarea { font: inherit; }
   }
   .history-clear {
     width: fit-content;
+  }
+  .history-platforms {
+    grid-template-columns: 1fr;
+  }
+  .history-platforms-label {
+    padding-top: 0;
+  }
+  .history-item-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
   .history-result {
     grid-template-columns: 64px 72px minmax(0, 1fr);
