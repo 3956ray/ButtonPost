@@ -28,6 +28,8 @@ type Props = {
   runnerUrl: string
   runnerToken: string
   runnerConnected: boolean
+  runnerSupported: boolean
+  runnerVersion: string
 }
 
 function loopbackInit(init: RequestInit = {}): LoopbackRequestInit {
@@ -58,6 +60,8 @@ export function LearnBlockchainRunnerCard({
   runnerUrl,
   runnerToken,
   runnerConnected,
+  runnerSupported,
+  runnerVersion,
 }: Props) {
   const [account, setAccount] = useState('default')
   const [state, setState] = useState<PlatformState>('unknown')
@@ -70,10 +74,31 @@ export function LearnBlockchainRunnerCard({
     if (saved) setAccount(saved)
   }, [])
 
+  useEffect(() => {
+    if (runnerConnected && !runnerSupported) {
+      setState('error')
+      setMessage(
+        'Local Runner' +
+          (runnerVersion ? ' v' + runnerVersion : '') +
+          ' does not support LearnBlockchain. Update ButtonPost, restart npm run runner, then reconnect.',
+      )
+    }
+  }, [runnerConnected, runnerSupported, runnerVersion])
+
   async function checkLogin() {
     if (!runnerConnected || !runnerUrl.trim() || !runnerToken.trim()) {
       setState('error')
       setMessage('Connect the Local Runner first.')
+      return
+    }
+
+    if (!runnerSupported) {
+      setState('error')
+      setMessage(
+        'Local Runner' +
+          (runnerVersion ? ' v' + runnerVersion : '') +
+          ' is too old for LearnBlockchain. Update and restart the runner.',
+      )
       return
     }
 
@@ -119,6 +144,16 @@ export function LearnBlockchainRunnerCard({
       return
     }
 
+    if (!runnerSupported) {
+      setState('error')
+      setMessage(
+        'Local Runner' +
+          (runnerVersion ? ' v' + runnerVersion : '') +
+          ' is too old for LearnBlockchain. Update and restart the runner.',
+      )
+      return
+    }
+
     window.localStorage.setItem(STORAGE_ACCOUNT, normalizedAccount)
     setAccount(normalizedAccount)
     setState('login')
@@ -160,7 +195,9 @@ export function LearnBlockchainRunnerCard({
   }
 
   const label =
-    state === 'connected'
+    runnerConnected && !runnerSupported
+      ? 'Update runner'
+      : state === 'connected'
       ? 'Connected'
       : state === 'login'
         ? 'Waiting for login'
@@ -199,14 +236,14 @@ export function LearnBlockchainRunnerCard({
           <button
             type="button"
             className="secondary-button"
-            disabled={!runnerConnected || busy}
+            disabled={!runnerConnected || !runnerSupported || busy}
             onClick={checkLogin}
           >
             Check login
           </button>
           <button
             type="button"
-            disabled={!runnerConnected || busy}
+            disabled={!runnerConnected || !runnerSupported || busy}
             onClick={login}
           >
             {state === 'login'
