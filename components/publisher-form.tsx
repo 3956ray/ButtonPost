@@ -59,6 +59,8 @@ const XHS_ACCOUNT_KEY = 'buttonpost.xiaohongshu.account'
 const JIKE_ACCOUNT_KEY = 'buttonpost.jike.account'
 const LEARNBLOCKCHAIN_ACCOUNT_KEY = 'buttonpost.learnblockchain.account'
 const INDIE_HACKERS_ACCOUNT_KEY = 'buttonpost.indiehackers.account'
+const ACTIVE_LOCAL_DESTINATIONS = ['xiaohongshu', 'jike', 'learnblockchain'] as const
+const ACTIVE_DESTINATION_SET = new Set<DestinationId>(ACTIVE_LOCAL_DESTINATIONS)
 
 function loopbackInit(init: RequestInit = {}): LoopbackRequestInit {
   return { ...init, targetAddressSpace: 'loopback' }
@@ -83,9 +85,10 @@ export function PublisherForm({ platforms }: Props) {
   const [content, setContent] = useState('')
   const [images, setImages] = useState<File[]>([])
   const [secret, setSecret] = useState('')
-  const [selected, setSelected] = useState<DestinationId[]>(
-    platforms.map((platform) => platform.id),
-  )
+  const [selected, setSelected] = useState<DestinationId[]>(() => [
+    ...platforms.map((platform) => platform.id),
+    ...ACTIVE_LOCAL_DESTINATIONS,
+  ])
   const [results, setResults] = useState<DisplayPublishResult[]>([])
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -137,7 +140,15 @@ export function PublisherForm({ platforms }: Props) {
   function reuseHistoryEntry(entry: PublicationHistoryEntry) {
     setTitle(entry.title)
     setContent(entry.content)
-    setSelected([...entry.selected])
+    const serverPlatformIds = new Set<DestinationId>(
+      platforms.map((platform) => platform.id),
+    )
+    setSelected(
+      entry.selected.filter(
+        (platform) =>
+          serverPlatformIds.has(platform) || ACTIVE_DESTINATION_SET.has(platform),
+      ),
+    )
     setImages([])
     setImageInputKey((value) => value + 1)
     setResults([])
@@ -786,7 +797,7 @@ export function PublisherForm({ platforms }: Props) {
             onChange={onImagesChange}
           />
           <p className="helper">
-            One source image set. X attaches up to 4 images, DEV stores them in the article, and Xiaohongshu/Jike/LearnBlockchain/Indie Hackers send local files directly to your Local Runner. Up to 9 source images are accepted.
+            One source image set. X attaches up to 4 images, DEV stores them in the article, and Xiaohongshu/Jike/LearnBlockchain send local files directly to your Local Runner. Up to 9 source images are accepted.
           </p>
           {mediaProgress ? <p className="media-progress">{mediaProgress}</p> : null}
           {images.length > 0 ? (
@@ -867,20 +878,6 @@ export function PublisherForm({ platforms }: Props) {
             </span>
           </label>
 
-          <label className="platform">
-            <input
-              type="checkbox"
-              checked={selected.includes('indiehackers')}
-              onChange={() => togglePlatform('indiehackers')}
-            />
-            <span className="platform-copy">
-              <span className="platform-name">
-                <span className="dot local" />
-                Indie Hackers
-              </span>
-              <span className="platform-note">Local Runner · review before post</span>
-            </span>
-          </label>
         </div>
 
         <div className="secret-wrap">
