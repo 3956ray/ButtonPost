@@ -2,6 +2,9 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   PUBLICATION_HISTORY_LIMIT,
+  filterHistoryByPlatform,
+  getHistoryPlatformResult,
+  listHistoryPlatforms,
   parsePublicationHistory,
   prependHistoryEntry,
   updateHistoryResults,
@@ -62,4 +65,26 @@ test('publication results update independently by platform', () => {
       externalUrl: 'https://dev.to/example/post',
     },
   ])
+})
+
+
+test('publication history can be drilled down by platform without splitting publish attempts', () => {
+  const first = entry('first')
+  const second: PublicationHistoryEntry = {
+    ...entry('second'),
+    selected: ['x'],
+    results: [{ platform: 'x', status: 'published' }],
+  }
+
+  const all = [second, first]
+
+  assert.deepEqual(listHistoryPlatforms(all), ['x', 'devto'])
+  assert.deepEqual(
+    filterHistoryByPlatform(all, 'devto').map((item) => item.id),
+    ['first'],
+  )
+  assert.equal(
+    getHistoryPlatformResult(first, 'devto')?.status,
+    'pending',
+  )
 })
