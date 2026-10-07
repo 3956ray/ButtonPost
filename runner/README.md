@@ -12,6 +12,8 @@ Phase 2 starts with a deliberately small contract:
 - `GET /v1/platforms/jike/status` — validate a locally stored Jike login.
 - `POST /v1/platforms/jike/login` — open Jike Web in local Chrome and wait for interactive login.
 - `POST /v1/platforms/jike/publish-post` — fill the Jike composer, upload optional JPEG/PNG images, then wait for manual Send.
+- `GET /v1/platforms/learnblockchain/status` — validate a locally stored LearnBlockchain login.
+- `POST /v1/platforms/learnblockchain/login` — open 登链社区 in local Chrome and wait for interactive login.
 - `POST /v1/publish` — reserved for future generic local routing.
 
 ## Start
@@ -140,3 +142,25 @@ BUTTONPOST_JIKE_REVIEW_TIMEOUT_MINUTES=30
 ```
 
 Jike publishing never sends its browser session or local image files through Vercel.
+
+
+## LearnBlockchain authentication
+
+Phase 4 starts the 登链社区 adapter with a non-publishing login lifecycle.
+
+The browser profile is isolated at:
+
+```text
+~/.buttonpost/profiles/learnblockchain/<account-name>
+```
+
+In ButtonPost Web:
+
+1. connect Local Runner v0.6.0 or later;
+2. choose an account name;
+3. click **Connect LearnBlockchain**;
+4. complete login in the local Chrome window;
+5. ButtonPost waits for a positive authenticated UI marker such as the **写文章** action or signed-in profile/avatar;
+6. later use **Check login** to validate the saved session.
+
+No article is created or published in this step. Once the login lifecycle is verified against the user's real account, the next increment will open the site's Markdown article editor, fill the source title/body, preserve review controls such as category/tags, and wait for manual publish.
