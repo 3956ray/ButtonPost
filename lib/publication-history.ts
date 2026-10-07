@@ -3,7 +3,7 @@ import type { PlatformId, PublishStatus } from '@/lib/publishers/types'
 export const PUBLICATION_HISTORY_KEY = 'buttonpost.publication-history.v1'
 export const PUBLICATION_HISTORY_LIMIT = 30
 
-export type HistoryPlatformId = PlatformId | 'xiaohongshu'
+export type HistoryPlatformId = PlatformId | 'xiaohongshu' | 'jike'
 export type HistoryPublishStatus = PublishStatus | 'reviewing' | 'pending'
 
 export type PublicationHistoryResult = {
@@ -25,7 +25,7 @@ export type PublicationHistoryEntry = {
 }
 
 function isPlatform(value: unknown): value is HistoryPlatformId {
-  return value === 'x' || value === 'devto' || value === 'xiaohongshu'
+  return value === 'x' || value === 'devto' || value === 'xiaohongshu' || value === 'jike'
 }
 
 function isStatus(value: unknown): value is HistoryPublishStatus {
