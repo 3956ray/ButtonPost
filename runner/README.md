@@ -15,6 +15,8 @@ Phase 2 starts with a deliberately small contract:
 - `GET /v1/platforms/learnblockchain/status` — validate a locally stored LearnBlockchain login.
 - `POST /v1/platforms/learnblockchain/login` — open 登链社区 in local Chrome and wait for interactive login.
 - `POST /v1/platforms/learnblockchain/publish-article` — open the signed-in article editor, fill title/Markdown/images when detected, then wait for manual publish.
+- `GET /v1/platforms/indiehackers/status` — validate the saved Indie Hackers session by accessing the protected new-post editor.
+- `POST /v1/platforms/indiehackers/login` — open Indie Hackers sign-in in local Chrome and wait until `/post/new` is accessible.
 - `POST /v1/publish` — reserved for future generic local routing.
 
 ## Start
@@ -253,3 +255,25 @@ The returned persistent image URL is then appended mechanically to the Markdown 
 ```
 
 ButtonPost accepts both the newer CDN-style `img.learnblockchain.cn/...` response and the Tipask-compatible `/image/show/...` response. The existing toolbar/file-input automation remains only as a fallback for customized installations.
+
+
+## Indie Hackers authentication
+
+Runner v0.8.0 starts the Indie Hackers adapter with an authentication-only lifecycle.
+
+The dedicated browser profile is:
+
+```text
+~/.buttonpost/profiles/indiehackers/<account-name>
+```
+
+The flow intentionally does not inspect or store the user's password:
+
+1. ButtonPost opens `https://www.indiehackers.com/sign-in` in local Chrome.
+2. The user completes Indie Hackers sign-in directly on the site.
+3. ButtonPost validates the resulting session by navigating to the protected `https://www.indiehackers.com/post/new` page.
+4. A redirect back to sign-in means the session is not connected.
+5. Access to the new-post editor means the local session is connected and reusable.
+6. Nothing is posted during authentication.
+
+Phase 5.2 will fill the new-post editor from the single ButtonPost source and stop for manual review/final submission. This preserves Indie Hackers' community-oriented posting workflow rather than making unattended submissions.
