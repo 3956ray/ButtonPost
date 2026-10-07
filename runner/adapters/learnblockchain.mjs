@@ -390,7 +390,7 @@ export async function loginLearnBlockchain(
         authenticated: false,
         status: 'timeout',
         message:
-          'Timed out waiting for the GitHub OAuth flow to return to LearnBlockchain. The browser was kept open for the full login window.',
+          'Timed out waiting for the selected login flow to return to LearnBlockchain. The browser was kept open for the full login window.',
       }
     } catch (cause) {
       throw chromeLaunchError(cause)
@@ -527,6 +527,7 @@ async function findArticleEditorPage(context, preferredPage) {
           'textarea[placeholder*="正文"]',
           'textarea[placeholder*="内容"]',
           '.cm-content[contenteditable="true"]',
+          '.CodeMirror',
           '.CodeMirror textarea',
           '[contenteditable="true"]',
         ],
@@ -545,27 +546,25 @@ async function findArticleEditorPage(context, preferredPage) {
 }
 
 async function fillEditorLocator(locator, value) {
-  const tagName = await locator.evaluate((element) =>
-    element.tagName.toLowerCase(),
-  )
-  const contentEditable = await locator
-    .getAttribute('contenteditable')
-    .catch(() => null)
+  const codeMirrorFilled = await locator
+    .evaluate((element, text) => {
+      const own = element.CodeMirror
+      const parent = element.closest?.('.CodeMirror')?.CodeMirror
+      const editor = own || parent
 
-  if (
-    tagName === 'input' ||
-    tagName === 'textarea' ||
-    contentEditable === 'true'
-  ) {
-    await locator.fill(value)
-    return
-  }
+      if (editor && typeof editor.setValue === 'function') {
+        editor.setValue(text)
+        editor.focus?.()
+        return true
+      }
 
-  await locator.click()
-  await locator.page().keyboard.press(
-    process.platform === 'darwin' ? 'Meta+A' : 'Control+A',
-  )
-  await locator.page().keyboard.insertText(value)
+      return false
+    }, value)
+    .catch(() => false)
+
+  if (codeMirrorFilled) return
+
+  await locator.fill(value)
 }
 
 async function uploadLearnBlockchainImages(page, imagePaths) {
