@@ -1,4 +1,10 @@
-import type { PublishResult, PublisherAdapter, SourcePost, ValidationResult } from './types'
+import type {
+  PlatformCredential,
+  PublishResult,
+  PublisherAdapter,
+  SourcePost,
+  ValidationResult,
+} from './types'
 
 type DevArticleResponse = {
   id?: number
@@ -46,18 +52,27 @@ export const devtoPublisher: PublisherAdapter = {
   id: 'devto',
   name: 'DEV Community',
   mode: 'API',
-  requiredEnv: ['DEVTO_API_KEY'],
+  requiredEnv: [],
 
   configured() {
-    return Boolean(process.env.DEVTO_API_KEY)
+    return true
   },
 
   validate: validateForDevto,
 
-  async publish(post): Promise<PublishResult> {
-    const apiKey = process.env.DEVTO_API_KEY
+  async publish(
+    post,
+    credential,
+  ): Promise<PublishResult> {
+    const apiKey =
+      credential?.kind === 'devto-api-key' ? credential.apiKey : null
+
     if (!apiKey) {
-      return { platform: 'devto', status: 'skipped', error: 'DEVTO_API_KEY is not configured.' }
+      return {
+        platform: 'devto',
+        status: 'skipped',
+        error: 'Connect your DEV account in ButtonPost Settings before publishing.',
+      }
     }
 
     const validation = validateForDevto(post)
@@ -70,7 +85,7 @@ export const devtoPublisher: PublisherAdapter = {
       headers: {
         'api-key': apiKey,
         'Content-Type': 'application/json',
-        Accept: 'application/json',
+        Accept: 'application/vnd.forem.api-v1+json',
       },
       body: JSON.stringify({
         article: {

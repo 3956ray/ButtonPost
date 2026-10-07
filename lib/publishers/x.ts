@@ -7,6 +7,7 @@ import type {
   SourceMedia,
   SourcePost,
   ValidationResult,
+  PlatformCredential,
 } from './types'
 
 function xMaxLength(): number {
@@ -40,35 +41,28 @@ export function validateForX(post: SourcePost): ValidationResult {
   return { ok: true }
 }
 
-function hasOAuth1UserContext(): boolean {
-  return Boolean(
-    process.env.X_API_KEY &&
-      process.env.X_API_SECRET &&
-      process.env.X_ACCESS_TOKEN &&
-      process.env.X_ACCESS_TOKEN_SECRET,
-  )
-}
-
-function createXClient(): TwitterApi | null {
-  if (hasOAuth1UserContext()) {
-    return new TwitterApi({
-      appKey: process.env.X_API_KEY!,
-      appSecret: process.env.X_API_SECRET!,
-      accessToken: process.env.X_ACCESS_TOKEN!,
-      accessSecret: process.env.X_ACCESS_TOKEN_SECRET!,
-    })
+function createXClient(
+  credential?: PlatformCredential,
+): TwitterApi | null {
+  if (
+    credential?.kind !== 'x-oauth1' ||
+    !process.env.X_API_KEY ||
+    !process.env.X_API_SECRET
+  ) {
+    return null
   }
 
-  if (process.env.X_USER_ACCESS_TOKEN) {
-    return new TwitterApi(process.env.X_USER_ACCESS_TOKEN)
-  }
-
-  return null
+  return new TwitterApi({
+    appKey: process.env.X_API_KEY,
+    appSecret: process.env.X_API_SECRET,
+    accessToken: credential.accessToken,
+    accessSecret: credential.accessSecret,
+  })
 }
 
 function appOnlyHint(message: string): string {
   if (message.includes('Application-Only') || message.includes('application-only')) {
-    return 'X rejected an application-only Bearer Token. Configure OAuth 1.0a user-context credentials (X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET) or provide an OAuth 2.0 user access token.'
+    return 'X rejected the current user authorization. Reconnect X in ButtonPost Settings and retry.'
   }
   return message
 }
@@ -201,25 +195,28 @@ export const xPublisher: PublisherAdapter = {
   id: 'x',
   name: 'X',
   mode: 'API',
-  requiredEnv: ['X user-context auth'],
+  requiredEnv: ['X_API_KEY', 'X_API_SECRET'],
 
   configured() {
-    return Boolean(createXClient())
+    return Boolean(process.env.X_API_KEY && process.env.X_API_SECRET)
   },
 
   validate: validateForX,
 
-  async publish(post): Promise<PublishResult> {
+  async publish(
+    post,
+    credential,
+  ): Promise<PublishResult> {
     const validation = validateForX(post)
     if (!validation.ok) return { platform: 'x', status: 'failed', error: validation.error }
 
-    const client = createXClient()
+    const client = createXClient(credential)
     if (!client) {
       return {
         platform: 'x',
         status: 'skipped',
         error:
-          'X user-context auth is not configured. Set OAuth 1.0a credentials or X_USER_ACCESS_TOKEN.',
+          'Connect your X account in ButtonPost Settings before publishing.',
       }
     }
 
