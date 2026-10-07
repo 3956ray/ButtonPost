@@ -545,26 +545,79 @@ async function findArticleEditorPage(context, preferredPage) {
   )
 }
 
-async function fillEditorLocator(locator, value) {
-  const codeMirrorFilled = await locator
-    .evaluate((element, text) => {
-      const own = element.CodeMirror
-      const parent = element.closest?.('.CodeMirror')?.CodeMirror
-      const editor = own || parent
+async function fillEditorLocator(page, locator, value) {
+  const meta = await locator.evaluate((element) => ({
+    tagName: element.tagName.toLowerCase(),
+    contentEditable: element.getAttribute('contenteditable'),
+    isCodeMirror:
+      element.classList.contains('CodeMirror') ||
+      Boolean(element.closest?.('.CodeMirror')),
+  }))
 
-      if (editor && typeof editor.setValue === 'function') {
-        editor.setValue(text)
-        editor.focus?.()
-        return true
-      }
+  if (meta.isCodeMirror) {
+    const codeMirrorFilled = await locator
+      .evaluate((element, text) => {
+        const root = element.classList.contains('CodeMirror')
+          ? element
+          : element.closest?.('.CodeMirror')
+        const editor = root?.CodeMirror
 
-      return false
-    }, value)
-    .catch(() => false)
+        if (editor && typeof editor.setValue === 'function') {
+          editor.setValue(text)
+          editor.focus?.()
+          return true
+        }
 
-  if (codeMirrorFilled) return
+        return false
+      }, value)
+      .catch(() => false)
 
-  await locator.fill(value)
+    if (codeMirrorFilled) return
+
+    const root = locator.locator('xpath=ancestor-or-self::*[contains(concat(" ", normalize-space(@class), " "), " CodeMirror ")][1]')
+    const textarea = root.locator('textarea').first()
+
+    if ((await textarea.count()) > 0) {
+      await textarea.evaluate((element) => element.focus())
+    } else {
+      await locator.click()
+    }
+
+    await page.keyboard.press(
+      process.platform === 'darwin' ? 'Meta+A' : 'Control+A',
+    )
+    await page.keyboard.insertText(value)
+    await sleep(300)
+
+    const rendered = (
+      (await root.locator('.CodeMirror-code').textContent().catch(() => '')) ||
+      (await root.textContent().catch(() => '')) ||
+      ''
+    ).trim()
+
+    if (!rendered && value.trim()) {
+      throw new Error(
+        'LearnBlockchain CodeMirror editor did not accept the Markdown body.',
+      )
+    }
+
+    return
+  }
+
+  if (
+    meta.tagName === 'input' ||
+    meta.tagName === 'textarea' ||
+    meta.contentEditable === 'true'
+  ) {
+    await locator.fill(value)
+    return
+  }
+
+  await locator.click()
+  await page.keyboard.press(
+    process.platform === 'darwin' ? 'Meta+A' : 'Control+A',
+  )
+  await page.keyboard.insertText(value)
 }
 
 async function uploadLearnBlockchainImages(page, imagePaths) {
@@ -773,8 +826,8 @@ export async function publishLearnBlockchainArticle({
       const editor = await findArticleEditorPage(context, page)
       page = editor.page
 
-      await fillEditorLocator(editor.title, normalizedTitle)
-      await fillEditorLocator(editor.content, normalizedContent)
+      await fillEditorLocator(page, editor.title, normalizedTitle)
+      await fillEditorLocator(page, editor.content, normalizedContent)
 
       const media = await uploadLearnBlockchainImages(
         page,

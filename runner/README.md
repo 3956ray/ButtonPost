@@ -207,3 +207,15 @@ BUTTONPOST_LBC_REVIEW_TIMEOUT_MINUTES=30
 ```
 
 If the current LearnBlockchain editor no longer exposes a detectable image file input, ButtonPost keeps the text/title filled and explicitly asks the user to add the selected images manually before the final publish. The publish action is never clicked automatically in this MVP.
+
+
+### LearnBlockchain CodeMirror compatibility
+
+Runner v0.7.1 fixes the real LearnBlockchain editor shape observed in production: the visible Markdown editor is a CodeMirror 5 wrapper (`.CodeMirror`), not a directly fillable input.
+
+ButtonPost now:
+
+1. uses the CodeMirror instance directly when the wrapper exposes one;
+2. otherwise focuses CodeMirror's internal textarea and inserts the complete Markdown through keyboard input;
+3. never calls Playwright `fill()` on the outer CodeMirror `div`;
+4. verifies that rendered editor content is non-empty before entering review mode.
