@@ -1,3 +1,4 @@
+import { canUseCloudPublishing } from '@/lib/billing/entitlement'
 import { loadCredential } from '@/lib/connections/store'
 import { publishEverywhere } from '@/lib/publishers/publish-everywhere'
 import {
@@ -54,6 +55,24 @@ export async function POST(request: Request) {
 
   if (!user) {
     return Response.json({ error: 'Sign in is required.' }, { status: 401 })
+  }
+
+  try {
+    const allowed = await canUseCloudPublishing(supabase, user.id)
+    if (!allowed) {
+      return Response.json(
+        {
+          error: 'ButtonPost Pro is required for cloud publishing.',
+          code: 'subscription_required',
+        },
+        { status: 402 },
+      )
+    }
+  } catch {
+    return Response.json(
+      { error: 'Could not verify ButtonPost subscription status.' },
+      { status: 503 },
+    )
   }
 
   let body: PublishRequest

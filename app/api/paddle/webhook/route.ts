@@ -29,9 +29,6 @@ function cancelAtPeriodEnd(data: Record<string, unknown>) {
 }
 
 async function syncSubscription(data: Record<string, unknown>) {
-  const userId = readUserId(data.customData)
-  if (!userId) return
-
   const id = typeof data.id === 'string' ? data.id : null
   const customerId =
     typeof data.customerId === 'string' ? data.customerId : null
@@ -40,7 +37,22 @@ async function syncSubscription(data: Record<string, unknown>) {
   if (!id) return
 
   const admin = createAdminClient()
-  const plan = ['active', 'trialing', 'past_due', 'paused'].includes(status)
+  let userId = readUserId(data.customData)
+
+  if (!userId) {
+    const { data: existing, error: lookupError } = await admin
+      .from('subscriptions')
+      .select('user_id')
+      .eq('paddle_subscription_id', id)
+      .maybeSingle()
+
+    if (lookupError) throw lookupError
+    userId = existing?.user_id ?? null
+  }
+
+  if (!userId) return
+
+  const plan = ['active', 'trialing', 'past_due'].includes(status)
     ? 'pro'
     : 'free'
 
