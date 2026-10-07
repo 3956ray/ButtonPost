@@ -117,3 +117,36 @@ export function updateHistoryResults(
     }
   })
 }
+
+
+export function listHistoryPlatforms(
+  entries: PublicationHistoryEntry[],
+): HistoryPlatformId[] {
+  const seen = new Set<HistoryPlatformId>()
+  const platforms: HistoryPlatformId[] = []
+
+  for (const entry of entries) {
+    for (const platform of entry.selected) {
+      if (seen.has(platform)) continue
+      seen.add(platform)
+      platforms.push(platform)
+    }
+  }
+
+  return platforms
+}
+
+export function filterHistoryByPlatform(
+  entries: PublicationHistoryEntry[],
+  platform: HistoryPlatformId | null,
+): PublicationHistoryEntry[] {
+  if (!platform) return entries
+  return entries.filter((entry) => entry.selected.includes(platform))
+}
+
+export function getHistoryPlatformResult(
+  entry: PublicationHistoryEntry,
+  platform: HistoryPlatformId,
+): PublicationHistoryResult | undefined {
+  return entry.results.find((result) => result.platform === platform)
+}
