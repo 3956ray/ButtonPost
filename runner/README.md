@@ -235,3 +235,21 @@ For every selected source image ButtonPost now:
 6. warns during review if an image could not be inserted, without auto-publishing.
 
 This keeps the final article portable and avoids reporting an image as successful merely because `setInputFiles()` returned without throwing.
+
+
+### LearnBlockchain direct body-image upload
+
+Runner v0.7.3 uses the authenticated LearnBlockchain browser session to call the platform's own editor image upload endpoint directly:
+
+```text
+POST /image/upload
+multipart field: file
+```
+
+The returned persistent image URL is then appended mechanically to the Markdown body as:
+
+```md
+![filename](https://...)
+```
+
+ButtonPost accepts both the newer CDN-style `img.learnblockchain.cn/...` response and the Tipask-compatible `/image/show/...` response. The existing toolbar/file-input automation remains only as a fallback for customized installations.
