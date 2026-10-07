@@ -294,3 +294,17 @@ BUTTONPOST_IH_REVIEW_TIMEOUT_MINUTES=30
 ```
 
 This MVP intentionally does not perform unattended community posting.
+
+
+### Indie Hackers current-site compatibility (Runner v0.8.1)
+
+The current Indie Hackers site no longer treats `/post/new` as a reliable login or composer URL; for some signed-in accounts it returns a 404 page.
+
+ButtonPost now separates two concepts:
+
+- **authenticated** — the Indie Hackers home page shows a signed-in account state;
+- **postingAllowed** — the signed-in UI actually exposes a New Post / Create Post / Start a Discussion control.
+
+The runner no longer navigates directly to `/post/new` for login checks or publishing. It starts from the real homepage, discovers the current posting entry from visible UI controls (including the navigation menu), and only then fills the detected editor.
+
+If the account is signed in but no posting control is available, ButtonPost reports that the account is connected but posting access is not currently available. This is intentionally different from an authentication failure.
