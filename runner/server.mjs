@@ -6,14 +6,19 @@ import {
   loginXiaohongshu,
   publishXiaohongshuNote,
 } from './adapters/xiaohongshu.mjs'
-import { readJikePostMultipart, readXiaohongshuNoteMultipart } from './multipart.mjs'
+import {
+  readJikePostMultipart,
+  readLearnBlockchainArticleMultipart,
+  readXiaohongshuNoteMultipart,
+} from './multipart.mjs'
 import { getJikeStatus, loginJike, publishJikePost } from './adapters/jike.mjs'
 import {
   getLearnBlockchainStatus,
   loginLearnBlockchain,
+  publishLearnBlockchainArticle,
 } from './adapters/learnblockchain.mjs'
 
-const VERSION = '0.6.1'
+const VERSION = '0.7.0'
 const host = process.env.BUTTONPOST_RUNNER_HOST || '127.0.0.1'
 const port = Number(process.env.BUTTONPOST_RUNNER_PORT || '27123')
 const token = process.env.BUTTONPOST_RUNNER_TOKEN || randomBytes(24).toString('base64url')
@@ -73,7 +78,7 @@ const server = createServer(async (req, res) => {
         name: 'ButtonPost Local Runner',
         version: VERSION,
         status: 'ready',
-        capabilities: ['xiaohongshu:auth', 'xiaohongshu:note', 'jike:auth', 'jike:post', 'learnblockchain:auth'],
+        capabilities: ['xiaohongshu:auth', 'xiaohongshu:note', 'jike:auth', 'jike:post', 'learnblockchain:auth', 'learnblockchain:article'],
       },
       cors,
     )
@@ -235,6 +240,27 @@ const server = createServer(async (req, res) => {
     }
   }
 
+  if (
+    req.method === 'POST' &&
+    requestUrl.pathname === '/v1/platforms/learnblockchain/publish-article'
+  ) {
+    let upload
+    try {
+      upload = await readLearnBlockchainArticleMultipart(req)
+      const result = await publishLearnBlockchainArticle({
+        account: upload.fields.account || 'default',
+        title: upload.fields.title || '',
+        content: upload.fields.content || '',
+        imagePaths: upload.imagePaths,
+      })
+      return sendJson(res, result.ok ? 200 : 409, result, cors)
+    } catch (cause) {
+      return sendJson(res, 500, errorBody(cause), cors)
+    } finally {
+      await upload?.cleanup().catch(() => {})
+    }
+  }
+
   if (req.method === 'POST' && requestUrl.pathname === '/v1/publish') {
     return sendJson(
       res,
@@ -256,7 +282,7 @@ server.listen(port, host, () => {
   console.log('  URL:     http://' + host + ':' + port)
   console.log('  Token:   ' + token)
   console.log('  Allowed origins: ' + [...allowedOrigins].join(', '))
-  console.log('  Capabilities: Xiaohongshu auth + image-note publishing; Jike auth + review publishing; LearnBlockchain auth')
+  console.log('  Capabilities: Xiaohongshu auth + image-note publishing; Jike auth + review publishing; LearnBlockchain auth + article review publishing')
   console.log('')
   console.log('Keep this terminal open while ButtonPost uses local browser publishers.')
   console.log('The token stays on your machine; paste it into ButtonPost only when pairing.')
