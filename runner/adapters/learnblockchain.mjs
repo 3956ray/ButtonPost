@@ -659,9 +659,16 @@ export function extractLearnBlockchainImageUrl(value) {
     .replace(/&amp;/g, '&')
 
   const absolute = normalized.match(
-    /https?:\/\/img\.learnblockchain\.cn\/[^\s"'<>\\]+/i,
+    /https?:\/\/(?:img\.)?learnblockchain\.cn\/(?:image\/show\/|attachments\/|pics\/|20\d{2}\/)[^\s"'<>\\]+/i,
   )
   if (absolute?.[0]) return absolute[0]
+
+  const imageShow = normalized.match(
+    /\/image\/show\/[^\s"'<>\\]+/i,
+  )
+  if (imageShow?.[0]) {
+    return 'https://learnblockchain.cn' + imageShow[0]
+  }
 
   const relative = normalized.match(
     /\/?(?:attachments|pics|20\d{2}\/)[^\s"'<>\\]+/i,
