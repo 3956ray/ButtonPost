@@ -77,9 +77,9 @@ function platformLabel(id: DisplayPublishResult['platform']) {
   return 'X'
 }
 
-function safeUploadName(file: File, index: number) {
+function safeUploadName(prefix: string, file: File, index: number) {
   const cleaned = file.name.replace(/[^a-zA-Z0-9._-]+/g, '-').slice(-120)
-  return `buttonpost/${Date.now()}-${index + 1}-${cleaned || 'image'}`
+  return `${prefix}${Date.now()}-${index + 1}-${cleaned || 'image'}`
 }
 
 export function PublisherForm({
@@ -218,10 +218,11 @@ export function PublisherForm({
       })
       const ticketData = (await ticketResponse.json().catch(() => ({}))) as {
         ticket?: string
+        prefix?: string
         error?: string
       }
 
-      if (!ticketResponse.ok || !ticketData.ticket) {
+      if (!ticketResponse.ok || !ticketData.ticket || !ticketData.prefix) {
         throw new Error(
           ticketData.error ||
             'ButtonPost could not create a temporary media upload ticket.',
@@ -232,12 +233,16 @@ export function PublisherForm({
 
       return await Promise.all(
         images.map(async (image, index) => {
-          const blob = await uploadPresigned(safeUploadName(image, index), image, {
+          const blob = await uploadPresigned(
+            safeUploadName(ticketData.prefix!, image, index),
+            image,
+            {
             access: 'public',
             handleUploadUrl: '/api/media/upload',
             clientPayload: JSON.stringify({ ticket: ticketData.ticket }),
-            multipart: image.size > 4 * 1024 * 1024,
-          })
+              multipart: image.size > 4 * 1024 * 1024,
+            },
+          )
 
           return {
             url: blob.url,

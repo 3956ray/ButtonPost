@@ -53,8 +53,16 @@ export async function POST(request: Request) {
           }
         }
 
-        if (!verifyMediaUploadTicket(payload.ticket)) {
+        const verified = verifyMediaUploadTicket(payload.ticket)
+        if (!verified) {
           throw new Error('Media upload ticket is invalid or expired.')
+        }
+
+        if (
+          !pathname.startsWith(verified.prefix) ||
+          pathname.includes('..')
+        ) {
+          throw new Error('Media upload pathname is outside the authorized user namespace.')
         }
 
         const validUntil = Date.now() + 5 * 60 * 1000

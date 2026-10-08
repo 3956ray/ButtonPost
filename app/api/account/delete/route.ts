@@ -1,3 +1,4 @@
+import { deleteUserCloudMedia } from '@/lib/media/blob-storage'
 import { cancelPaddleSubscriptionImmediately } from '@/lib/paddle/subscriptions'
 import {
   consumeRateLimit,
@@ -70,6 +71,18 @@ export async function DELETE(request: Request) {
     return Response.json(
       { error: 'Account deletion is not configured on this deployment.' },
       { status: 503 },
+    )
+  }
+
+  try {
+    await deleteUserCloudMedia(user.id)
+  } catch {
+    return Response.json(
+      {
+        error:
+          'Could not delete ButtonPost cloud media. The account was not deleted.',
+      },
+      { status: 502 },
     )
   }
 
