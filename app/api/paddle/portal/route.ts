@@ -1,4 +1,8 @@
 import { getPaddleEnvironment } from '@/lib/paddle/server'
+import {
+  consumeRateLimit,
+  rateLimitResponse,
+} from '@/lib/security/rate-limit'
 import { createClient } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
@@ -29,6 +33,16 @@ export async function POST() {
 
   if (!user) {
     return Response.json({ error: 'Sign in is required.' }, { status: 401 })
+  }
+
+  try {
+    const rateLimit = await consumeRateLimit(supabase, 'billing_portal')
+    if (!rateLimit.allowed) return rateLimitResponse(rateLimit)
+  } catch {
+    return Response.json(
+      { error: 'Could not verify billing portal rate limit.' },
+      { status: 503 },
+    )
   }
 
   const apiKey = process.env.PADDLE_API_KEY?.trim()

@@ -40,6 +40,9 @@ export default async function PricingPage() {
             <Link className="auth-link" href="/settings/billing">
               Billing
             </Link>
+            <Link className="auth-link" href="/settings/account">
+              Account
+            </Link>
             <span className="auth-chip">{user.email}</span>
           </div>
         </div>

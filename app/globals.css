@@ -1254,3 +1254,78 @@ button, input, textarea { font: inherit; }
     transform: none;
   }
 }
+
+
+/* Phase 6E · account lifecycle */
+.account-card,
+.danger-card {
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 18px 50px rgba(24, 23, 18, .04);
+}
+.account-card h2,
+.danger-card h2 {
+  margin: 5px 0 0;
+  font-size: 24px;
+  letter-spacing: -.035em;
+}
+.account-card p,
+.danger-card p {
+  max-width: 660px;
+  margin: 13px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.danger-card {
+  margin-top: 14px;
+  border-color: #e7c8c2;
+  background: #fffaf8;
+}
+.danger-card code {
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: #f1ede8;
+}
+.delete-confirmation {
+  display: grid;
+  gap: 7px;
+  max-width: 360px;
+  margin-top: 20px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+.delete-confirmation input {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #d6b5ae;
+  border-radius: 10px;
+  background: white;
+  color: var(--text);
+  outline: none;
+}
+.delete-confirmation input:focus {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(160, 57, 43, .08);
+}
+.danger-button {
+  margin-top: 14px;
+  padding: 11px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--danger);
+  color: white;
+  cursor: pointer;
+  font-weight: 800;
+}
+.danger-button:disabled {
+  opacity: .42;
+  cursor: not-allowed;
+}
+.danger-error {
+  color: var(--danger) !important;
+  font-weight: 750;
+}

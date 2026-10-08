@@ -86,6 +86,9 @@ export default async function HomePage() {
                 <Link className="auth-link" href="/settings/billing">
                   Billing
                 </Link>
+                <Link className="auth-link" href="/settings/account">
+                  Account
+                </Link>
                 <span className="auth-email" title={auth.email ?? undefined}>
                   {auth.email ?? 'Signed in'}
                 </span>

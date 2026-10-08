@@ -21,6 +21,10 @@ function noticeFor(params: { connected?: string; error?: string }) {
     x_callback_missing: 'X authorization was canceled or expired.',
     x_callback_failed:
       'X authorization could not be completed. Try connecting again.',
+    x_rate_limited:
+      'Too many X connection attempts. Wait a few minutes and try again.',
+    x_rate_limit_failed:
+      'ButtonPost could not verify the X connection rate limit.',
   }
 
   return params.error ? messages[params.error] ?? 'Connection failed.' : null
@@ -52,6 +56,9 @@ export default async function ConnectionsPage({ searchParams }: Props) {
         <div className="settings-header-actions">
           <Link className="auth-link" href="/settings/billing">
             Billing
+          </Link>
+          <Link className="auth-link" href="/settings/account">
+            Account
           </Link>
           <span className="auth-chip">{user.email}</span>
         </div>

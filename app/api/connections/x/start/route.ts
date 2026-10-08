@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { TwitterApi } from 'twitter-api-v2'
 import { encryptJson } from '@/lib/security/credential-crypto'
+import { consumeRateLimit } from '@/lib/security/rate-limit'
 import { createClient } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
@@ -41,6 +42,25 @@ export async function GET(request: Request) {
   if (!user) {
     return NextResponse.redirect(
       new URL('/login', canonical ?? requestUrl),
+    )
+  }
+
+  try {
+    const rateLimit = await consumeRateLimit(supabase, 'x_oauth_start')
+    if (!rateLimit.allowed) {
+      return NextResponse.redirect(
+        new URL(
+          '/settings/connections?error=x_rate_limited',
+          canonical ?? requestUrl,
+        ),
+      )
+    }
+  } catch {
+    return NextResponse.redirect(
+      new URL(
+        '/settings/connections?error=x_rate_limit_failed',
+        canonical ?? requestUrl,
+      ),
     )
   }
 

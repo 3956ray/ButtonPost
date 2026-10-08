@@ -70,6 +70,18 @@ async function syncSubscription(data: Record<string, unknown>) {
 
   if (!userId) return
 
+  const { data: profile, error: profileError } = await admin
+    .from('profiles')
+    .select('user_id')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (profileError) throw profileError
+
+  // Account deletion removes the profile row before Paddle's cancellation
+  // webhook may arrive. Ignore those late events instead of retrying forever.
+  if (!profile) return
+
   const priceId = readPriceId(data)
   const tier = priceId ? paidPlanForPriceId(priceId) : null
   const active = ['active', 'trialing', 'past_due'].includes(status)
