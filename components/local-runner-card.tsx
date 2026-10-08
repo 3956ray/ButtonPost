@@ -63,6 +63,7 @@ export function LocalRunnerCard() {
   const [runnerUrl, setRunnerUrl] = useState(DEFAULT_RUNNER_URL)
   const [runnerToken, setRunnerToken] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [expanded, setExpanded] = useState(false)
   const [state, setState] = useState<RunnerState>('idle')
   const [message, setMessage] = useState('Not connected')
   const [version, setVersion] = useState('')
@@ -85,6 +86,7 @@ export function LocalRunnerCard() {
     const match = /^#buttonpost-runner=([A-Za-z0-9_-]{32,})$/.exec(window.location.hash)
     const autoToken = match?.[1]
     if (autoToken) {
+      setExpanded(true)
       window.history.replaceState(null, '', window.location.pathname + window.location.search)
       window.localStorage.setItem(STORAGE_URL, DEFAULT_RUNNER_URL)
       window.localStorage.setItem(STORAGE_TOKEN, autoToken)
@@ -270,7 +272,9 @@ export function LocalRunnerCard() {
       ? 'Connected' + (version ? ' · v' + version : '')
       : state === 'checking'
         ? 'Checking'
-        : 'Offline'
+        : state === 'error'
+          ? 'Setup needed'
+          : 'Not set up'
 
   const xhsLabel =
     xhsState === 'connected'
@@ -288,13 +292,14 @@ export function LocalRunnerCard() {
   const xhsBusy = xhsState === 'login' || xhsState === 'checking'
 
   return (
-    <section className="runner-card" id="local-runner-setup">
+    <section className={'runner-card ' + (expanded ? 'runner-card--expanded' : '')} id="local-runner-setup">
+      <div className="runner-cover">
       <div className="runner-heading">
         <div>
-          <span className="eyebrow">MVP</span>
-          <h2>Optional Local Runner</h2>
+          <span className="eyebrow">EXPAND YOUR REACH / OPTIONAL</span>
+          <h2>More platforms, when you need them.</h2>
           <p>
-            X and DEV work entirely online. Only install this helper if you want to publish to browser-based platforms such as Xiaohongshu, Jike or LearnBlockchain.
+            X and DEV need no installation. To publish to 小红书, 即刻 or 登链社区, add our private on-device publishing helper.
           </p>
         </div>
         <span className={'runner-state ' + state}>
@@ -302,7 +307,19 @@ export function LocalRunnerCard() {
           {stateLabel}
         </span>
       </div>
+      <button
+        className="runner-toggle"
+        type="button"
+        aria-expanded={expanded}
+        aria-controls="runner-details"
+        onClick={() => setExpanded(open => !open)}
+      >
+        {expanded ? 'Hide setup' : 'Enable local publishing'}
+        <span className="runner-toggle-arrow" aria-hidden="true">⌄</span>
+      </button>
+      </div>
 
+      <div className="runner-details" id="runner-details" hidden={!expanded}>
       <div className="runner-actions">
         <a className="connection-primary" href="https://github.com/3956ray/ButtonPost/blob/main/docs/runner-install.md" target="_blank" rel="noreferrer">
           How to install the optional helper ↗
@@ -420,6 +437,7 @@ export function LocalRunnerCard() {
         runnerVersion={version}
       />
       </>) : null}
+      </div>
 
     </section>
   )
