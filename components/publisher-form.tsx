@@ -912,48 +912,48 @@ export function PublisherForm({
             )
           })}
 
-          <label className="platform">
+          <label className={'platform ' + (localReady['xiaohongshu'] ? '' : 'disabled')}>
             <input
               type="checkbox"
               checked={selected.includes('xiaohongshu')}
               disabled={!localReady['xiaohongshu']}
-               onChange={() => togglePlatform('xiaohongshu')}
+              onChange={() => togglePlatform('xiaohongshu')}
             />
             <span className="platform-copy">
               <span className="platform-name">
-                <span className="dot local" />
+                <span className={'dot ' + (localReady['xiaohongshu'] ? 'local' : 'off')} />
                 Xiaohongshu · 小红书
               </span>
               <span className="platform-note">{localReady['xiaohongshu'] ? 'Local Runner · review before publish' : 'Needs optional Local Runner + login · see below'}</span>
             </span>
           </label>
 
-          <label className="platform">
+          <label className={'platform ' + (localReady['jike'] ? '' : 'disabled')}>
             <input
               type="checkbox"
               checked={selected.includes('jike')}
               disabled={!localReady['jike']}
-               onChange={() => togglePlatform('jike')}
+              onChange={() => togglePlatform('jike')}
             />
             <span className="platform-copy">
               <span className="platform-name">
-                <span className="dot local" />
+                <span className={'dot ' + (localReady['jike'] ? 'local' : 'off')} />
                 Jike · 即刻
               </span>
               <span className="platform-note">{localReady['jike'] ? 'Local Runner · review before send' : 'Needs optional Local Runner + login · see below'}</span>
             </span>
           </label>
 
-          <label className="platform">
+          <label className={'platform ' + (localReady['learnblockchain'] ? '' : 'disabled')}>
             <input
               type="checkbox"
               checked={selected.includes('learnblockchain')}
               disabled={!localReady['learnblockchain']}
-               onChange={() => togglePlatform('learnblockchain')}
+              onChange={() => togglePlatform('learnblockchain')}
             />
             <span className="platform-copy">
               <span className="platform-name">
-                <span className="dot local" />
+                <span className={'dot ' + (localReady['learnblockchain'] ? 'local' : 'off')} />
                 LearnBlockchain · 登链社区
               </span>
               <span className="platform-note">{localReady['learnblockchain'] ? 'Local Runner · article review before publish' : 'Needs optional Local Runner + login · see below'}</span>
@@ -989,7 +989,7 @@ export function PublisherForm({
       </aside>
 
       {retryNotice ? <p className="selection-warning" role="status">{retryNotice}</p> : null}
-       {error ? <div className="error-banner">{error}</div> : null}
+      {error ? <div className="error-banner">{error}</div> : null}
 
       {results.length > 0 ? (
         <section className="results" aria-live="polite">
@@ -1011,6 +1011,22 @@ export function PublisherForm({
               </div>
             ))}
           </div>
+          {!submitting && results.some((result) => result.status === 'failed') && (
+            <div className="result-retry">
+              <button
+                type="button"
+                className="history-reuse"
+                onClick={() => {
+                  const recordId = latestFiles.current?.id
+                  const record = historyRef.current.find((entry) => entry.id === recordId)
+                  if (record) retryFailed(record)
+                }}
+              >
+                Retry failed platforms ({results.filter((result) => result.status === 'failed').length})
+              </button>
+              <span>Prepares only failed destinations. Review before publishing again.</span>
+            </div>
+          )}
         </section>
       ) : null}
       </form>
