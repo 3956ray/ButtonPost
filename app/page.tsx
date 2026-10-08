@@ -84,9 +84,9 @@ function DistributionArtwork() {
         <div className="distribution-channels">
           <span className="distribution-channel"><b>𝕏</b><span>X</span><i /></span>
           <span className="distribution-channel"><b>D</b><span>DEV</span><i /></span>
-          <span className="distribution-channel"><b>小</b><span>小红书</span><i /></span>
-          <span className="distribution-channel"><b>即</b><span>即刻</span><i /></span>
-          <span className="distribution-channel"><b>链</b><span>登链</span><i /></span>
+          <span className="distribution-channel"><b>XH</b><span>Xiaohongshu</span><i /></span>
+          <span className="distribution-channel"><b>JK</b><span>Jike</span><i /></span>
+          <span className="distribution-channel"><b>LB</b><span>LearnBlockchain</span><i /></span>
         </div>
       </div>
       <div className="distribution-art-bottom">
