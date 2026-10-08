@@ -1,4 +1,8 @@
-import { getPaddleEnvironment } from '@/lib/paddle/server'
+import {
+  paddleApiBase,
+  paddleApiKey,
+  resolvePaddleEnvironment,
+} from '@/lib/paddle/runtime'
 import {
   consumeRateLimit,
   rateLimitResponse,
@@ -17,15 +21,7 @@ type PaddlePortalResponse = {
   }
 }
 
-function paddleApiBase() {
-  const environment = getPaddleEnvironment()
-
-  return environment === 'production'
-    ? 'https://api.paddle.com'
-    : 'https://sandbox-api.paddle.com'
-}
-
-export async function POST() {
+export async function POST(request: Request) {
   const supabase = await createClient()
   const {
     data: { user },
@@ -45,10 +41,16 @@ export async function POST() {
     )
   }
 
-  const apiKey = process.env.PADDLE_API_KEY?.trim()
-  if (!apiKey) {
+  const environment = resolvePaddleEnvironment(
+    new URL(request.url).hostname,
+  )
+
+  let apiKey: string
+  try {
+    apiKey = paddleApiKey(environment)
+  } catch {
     return Response.json(
-      { error: 'Paddle billing is not configured.' },
+      { error: 'Paddle billing is not configured for this environment.' },
       { status: 503 },
     )
   }
@@ -57,6 +59,7 @@ export async function POST() {
     .from('subscriptions')
     .select('paddle_customer_id,paddle_subscription_id')
     .eq('user_id', user.id)
+    .eq('environment', environment)
     .maybeSingle()
 
   if (error) {
@@ -74,13 +77,14 @@ export async function POST() {
   }
 
   const response = await fetch(
-    `${paddleApiBase()}/customers/${encodeURIComponent(
-      subscription.paddle_customer_id,
-    )}/portal-sessions`,
+    paddleApiBase(environment) +
+      '/customers/' +
+      encodeURIComponent(subscription.paddle_customer_id) +
+      '/portal-sessions',
     {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: 'Bearer ' + apiKey,
         'Content-Type': 'application/json',
         Accept: 'application/json',
       },

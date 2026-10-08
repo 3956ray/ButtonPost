@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server'
 import { paidPlanForPriceId } from '@/lib/billing/tiers'
+import {
+  paddleWebhookSecret,
+  resolvePaddleEnvironment,
+  type PaddleEnvironmentName,
+} from '@/lib/paddle/runtime'
 import { createPaddleServerClient } from '@/lib/paddle/server'
+import { verifyLivePaddleWebhookSource } from '@/lib/paddle/webhook-security'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const runtime = 'nodejs'
@@ -43,7 +49,10 @@ function readPriceId(data: Record<string, unknown>) {
   return null
 }
 
-async function syncSubscription(data: Record<string, unknown>) {
+async function syncSubscription(
+  data: Record<string, unknown>,
+  environment: PaddleEnvironmentName,
+) {
   const id = typeof data.id === 'string' ? data.id : null
   const customerId =
     typeof data.customerId === 'string' ? data.customerId : null
@@ -59,6 +68,7 @@ async function syncSubscription(data: Record<string, unknown>) {
     .from('subscriptions')
     .select('user_id,plan')
     .eq('paddle_subscription_id', id)
+    .eq('environment', environment)
     .maybeSingle()
 
   if (lookupError) throw lookupError
@@ -77,19 +87,19 @@ async function syncSubscription(data: Record<string, unknown>) {
     .maybeSingle()
 
   if (profileError) throw profileError
-
-  // Account deletion removes the profile row before Paddle's cancellation
-  // webhook may arrive. Ignore those late events instead of retrying forever.
   if (!profile) return
 
   const priceId = readPriceId(data)
-  const tier = priceId ? paidPlanForPriceId(priceId) : null
+  const tier = priceId
+    ? paidPlanForPriceId(priceId, environment)
+    : null
   const active = ['active', 'trialing', 'past_due'].includes(status)
   const plan = active ? tier ?? existingPlan ?? 'free' : 'free'
 
   const { error } = await admin.from('subscriptions').upsert(
     {
       user_id: userId,
+      environment,
       provider: 'paddle',
       paddle_customer_id: customerId,
       paddle_subscription_id: id,
@@ -99,32 +109,78 @@ async function syncSubscription(data: Record<string, unknown>) {
       cancel_at_period_end: cancelAtPeriodEnd(data),
       updated_at: new Date().toISOString(),
     },
-    { onConflict: 'user_id' },
+    { onConflict: 'user_id,environment' },
   )
 
   if (error) throw error
 }
 
 export async function POST(request: Request) {
-  const signature = request.headers.get('paddle-signature') ?? ''
-  const webhookSecret = process.env.PADDLE_WEBHOOK_SECRET?.trim()
+  const environment = resolvePaddleEnvironment(
+    new URL(request.url).hostname,
+  )
 
-  if (!signature || !webhookSecret) {
+  if (environment === 'production') {
+    try {
+      const source = await verifyLivePaddleWebhookSource(request)
+
+      if (!source.allowed) {
+        console.warn('[paddle-webhook] rejected live source', {
+          environment,
+          sourceIp: source.ip,
+          reason: source.reason,
+        })
+
+        return NextResponse.json(
+          { error: 'Webhook source is not allowlisted.' },
+          { status: 403 },
+        )
+      }
+    } catch (cause) {
+      console.error('[paddle-webhook] live allowlist unavailable', {
+        errorName: cause instanceof Error ? cause.name : 'UnknownError',
+        errorMessage:
+          cause instanceof Error
+            ? cause.message.slice(0, 240)
+            : 'Unknown allowlist failure',
+      })
+
+      return NextResponse.json(
+        { error: 'Webhook allowlist is temporarily unavailable.' },
+        { status: 503 },
+      )
+    }
+  }
+
+  const signature = request.headers.get('paddle-signature') ?? ''
+
+  let webhookSecret: string
+  try {
+    webhookSecret = paddleWebhookSecret(environment)
+  } catch {
     return NextResponse.json(
       { error: 'Paddle webhook is not configured.' },
       { status: 503 },
     )
   }
 
+  if (!signature) {
+    return NextResponse.json(
+      { error: 'Paddle signature is required.' },
+      { status: 400 },
+    )
+  }
+
   const rawBody = await request.text()
 
   console.info('[paddle-webhook] received', {
+    environment,
     hasSignature: Boolean(signature),
     bodyLength: rawBody.length,
   })
 
   try {
-    const paddle = createPaddleServerClient()
+    const paddle = createPaddleServerClient(environment)
     const event = await paddle.webhooks.unmarshal(
       rawBody,
       webhookSecret,
@@ -132,6 +188,7 @@ export async function POST(request: Request) {
     )
 
     console.info('[paddle-webhook] verified', {
+      environment,
       eventId: event.eventId,
       eventType: event.eventType,
     })
@@ -142,10 +199,13 @@ export async function POST(request: Request) {
       .from('paddle_webhook_events')
       .select('event_id')
       .eq('event_id', event.eventId)
+      .eq('environment', environment)
       .maybeSingle()
 
     if (existingError) throw existingError
-    if (existing) return NextResponse.json({ ok: true, duplicate: true })
+    if (existing) {
+      return NextResponse.json({ ok: true, duplicate: true })
+    }
 
     if (
       event.eventType === 'subscription.created' ||
@@ -156,13 +216,17 @@ export async function POST(request: Request) {
       event.eventType === 'subscription.paused' ||
       event.eventType === 'subscription.resumed'
     ) {
-      await syncSubscription(event.data as unknown as Record<string, unknown>)
+      await syncSubscription(
+        event.data as unknown as Record<string, unknown>,
+        environment,
+      )
     }
 
     const { error: auditError } = await admin
       .from('paddle_webhook_events')
       .insert({
         event_id: event.eventId,
+        environment,
         event_type: event.eventType,
         occurred_at: event.occurredAt,
       })
@@ -170,6 +234,7 @@ export async function POST(request: Request) {
     if (auditError) throw auditError
 
     console.info('[paddle-webhook] processed', {
+      environment,
       eventId: event.eventId,
       eventType: event.eventType,
     })
@@ -177,6 +242,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true })
   } catch (cause) {
     console.error('[paddle-webhook] failed', {
+      environment,
       errorName: cause instanceof Error ? cause.name : 'UnknownError',
       errorMessage:
         cause instanceof Error
@@ -184,6 +250,9 @@ export async function POST(request: Request) {
           : 'Unknown webhook failure',
     })
 
-    return NextResponse.json({ error: 'Invalid webhook.' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Invalid webhook.' },
+      { status: 400 },
+    )
   }
 }

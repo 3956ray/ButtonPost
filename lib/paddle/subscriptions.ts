@@ -1,26 +1,25 @@
 import 'server-only'
-import { getPaddleEnvironment } from '@/lib/paddle/server'
-
-function apiBase() {
-  return getPaddleEnvironment() === 'production'
-    ? 'https://api.paddle.com'
-    : 'https://sandbox-api.paddle.com'
-}
+import {
+  paddleApiBase,
+  paddleApiKey,
+  type PaddleEnvironmentName,
+} from '@/lib/paddle/runtime'
 
 export async function cancelPaddleSubscriptionImmediately(
   subscriptionId: string,
+  environment: PaddleEnvironmentName,
 ) {
-  const apiKey = process.env.PADDLE_API_KEY?.trim()
-  if (!apiKey) {
-    throw new Error('Paddle API access is not configured.')
-  }
+  const apiKey = paddleApiKey(environment)
 
   const response = await fetch(
-    `${apiBase()}/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`,
+    paddleApiBase(environment) +
+      '/subscriptions/' +
+      encodeURIComponent(subscriptionId) +
+      '/cancel',
     {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: 'Bearer ' + apiKey,
         'Content-Type': 'application/json',
         Accept: 'application/json',
       },
@@ -33,7 +32,9 @@ export async function cancelPaddleSubscriptionImmediately(
 
   if (!response.ok) {
     throw new Error(
-      `Paddle subscription cancellation failed with status ${response.status}.`,
+      'Paddle subscription cancellation failed with status ' +
+        response.status +
+        '.',
     )
   }
 }

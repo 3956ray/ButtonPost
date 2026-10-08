@@ -2,6 +2,7 @@ import {
   getCloudPublishUsage,
   planEnforcementEnabled,
 } from '@/lib/billing/usage'
+import { resolvePaddleEnvironment } from '@/lib/paddle/runtime'
 import { createMediaUploadTicket } from '@/lib/security/media-ticket'
 import {
   consumeRateLimit,
@@ -11,7 +12,7 @@ import { createClient } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
 
-export async function POST() {
+export async function POST(request: Request) {
   const supabase = await createClient()
   const {
     data: { user },
@@ -31,8 +32,12 @@ export async function POST() {
     )
   }
 
+  const environment = resolvePaddleEnvironment(
+    new URL(request.url).hostname,
+  )
+
   try {
-    const usage = await getCloudPublishUsage(supabase)
+    const usage = await getCloudPublishUsage(user.id, environment)
 
     if (
       planEnforcementEnabled() &&

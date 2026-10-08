@@ -1,13 +1,15 @@
 import { initializePaddle } from '@paddle/paddle-js'
+import type { PaddleEnvironmentName } from '@/lib/paddle/runtime'
 
-export type PaddleBrowserEnvironment = 'sandbox' | 'production'
+export type PaddleBrowserEnvironment = PaddleEnvironmentName
 
 export async function createPaddleClient(
   environment: PaddleBrowserEnvironment,
+  token: string,
+  paddleCustomerId?: string | null,
 ) {
-  const token = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN?.trim()
   if (!token) {
-    throw new Error('NEXT_PUBLIC_PADDLE_CLIENT_TOKEN is not configured.')
+    throw new Error('Paddle client-side token is not configured.')
   }
 
   if (environment === 'sandbox' && !token.startsWith('test_')) {
@@ -16,14 +18,23 @@ export async function createPaddleClient(
     )
   }
 
-  if (environment === 'production' && token.startsWith('test_')) {
+  if (environment === 'production' && !token.startsWith('live_')) {
     throw new Error(
-      'Paddle production cannot use a sandbox client-side token.',
+      'Paddle production requires a live client-side token prefixed with live_.',
     )
+  }
+
+  if (environment === 'production') {
+    return initializePaddle({
+      token,
+      pwCustomer: paddleCustomerId
+        ? { id: paddleCustomerId }
+        : {},
+    })
   }
 
   return initializePaddle({
     token,
-    environment,
+    environment: 'sandbox',
   })
 }

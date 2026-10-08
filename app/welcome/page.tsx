@@ -1,5 +1,7 @@
 import Link from 'next/link'
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { resolvePaddleEnvironment } from '@/lib/paddle/runtime'
 import { createClient } from '@/lib/supabase/server'
 
 export default async function WelcomePage() {
@@ -12,10 +14,16 @@ export default async function WelcomePage() {
     redirect('/login?next=/welcome')
   }
 
+  const requestHeaders = await headers()
+  const environment = resolvePaddleEnvironment(
+    requestHeaders.get('host'),
+  )
+
   const { data: subscription } = await supabase
     .from('subscriptions')
     .select('plan,status')
     .eq('user_id', user.id)
+    .eq('environment', environment)
     .maybeSingle()
 
   const active =

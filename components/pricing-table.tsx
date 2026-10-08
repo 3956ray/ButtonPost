@@ -16,6 +16,8 @@ type TierName = Tier['name']
 type Props = {
   tiers: Tier[]
   environment: PaddleBrowserEnvironment
+  clientToken: string
+  paddleCustomerId?: string | null
   countryCode?: string
   userId: string
   email: string | null
@@ -26,6 +28,8 @@ type PriceMap = Partial<Record<TierName, string>>
 export function PricingTable({
   tiers,
   environment,
+  clientToken,
+  paddleCustomerId,
   countryCode,
   userId,
   email,
@@ -41,7 +45,11 @@ export function PricingTable({
 
   function getPaddle() {
     if (!paddlePromise.current) {
-      paddlePromise.current = createPaddleClient(environment)
+      paddlePromise.current = createPaddleClient(
+        environment,
+        clientToken,
+        paddleCustomerId,
+      )
     }
     return paddlePromise.current
   }
