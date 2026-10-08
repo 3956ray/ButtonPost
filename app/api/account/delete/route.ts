@@ -63,6 +63,16 @@ export async function DELETE(request: Request) {
     )
   }
 
+  let admin: ReturnType<typeof createAdminClient>
+  try {
+    admin = createAdminClient()
+  } catch {
+    return Response.json(
+      { error: 'Account deletion is not configured on this deployment.' },
+      { status: 503 },
+    )
+  }
+
   const { data: subscription, error: subscriptionError } = await supabase
     .from('subscriptions')
     .select('paddle_subscription_id,status')
@@ -96,7 +106,6 @@ export async function DELETE(request: Request) {
   }
 
   try {
-    const admin = createAdminClient()
     const { error } = await admin.auth.admin.deleteUser(user.id)
 
     if (error) throw error
