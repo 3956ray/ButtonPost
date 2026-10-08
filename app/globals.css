@@ -2116,3 +2116,25 @@ button:active:not(:disabled) { transform: translateY(0); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+/* Navigating by keyboard goes straight to the editor. */
+.skip-link {
+  position: absolute; z-index: 50; top: -100px; left: 16px;
+  padding: 12px 18px; border-radius: 10px; background: var(--text);
+  color: white; font-size: 12px; font-weight: 750; text-decoration: none;
+}
+.skip-link:focus { top: 12px; }
+.runner-cover { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.runner-cover .runner-heading { flex: 1; min-width: 0; }
+.runner-cover .runner-heading > div { min-width: 0; }
+.runner-cover .runner-heading > .runner-state { align-self: center; }
+.runner-cover .runner-toggle { flex: 0 0 auto; }
+@media (max-width: 1050px) {
+  .runner-cover { align-items: flex-start; flex-direction: column; }
+  .runner-cover .runner-heading { width: 100%; }
+}
+@media (max-width: 560px) {
+  .runner-cover .runner-heading { flex-direction: column; }
+  .runner-cover .runner-toggle { width: 100%; }
+  .runner-details .runner-actions code { margin-left: 0; }
+}
