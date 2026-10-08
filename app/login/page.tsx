@@ -4,8 +4,21 @@ import { AuthButtons } from '@/components/auth-buttons'
 import { getSupabasePublicConfig } from '@/lib/supabase/config'
 import { createClient } from '@/lib/supabase/server'
 
-export default async function LoginPage() {
+type Props = {
+  searchParams: Promise<{
+    next?: string
+  }>
+}
+
+function safeNext(value: string | undefined) {
+  if (!value || !value.startsWith('/') || value.startsWith('//')) return '/'
+  return value
+}
+
+export default async function LoginPage({ searchParams }: Props) {
   const configured = Boolean(getSupabasePublicConfig())
+  const params = await searchParams
+  const nextPath = safeNext(params.next)
   let signedIn = false
 
   if (configured) {
@@ -21,7 +34,7 @@ export default async function LoginPage() {
   }
 
   if (signedIn) {
-    redirect('/')
+    redirect(nextPath)
   }
 
   return (
@@ -34,15 +47,12 @@ export default async function LoginPage() {
         </p>
 
         {configured ? (
-          <AuthButtons />
+          <AuthButtons nextPath={nextPath} />
         ) : (
-          <p className="auth-error">Authentication is not configured on this deployment yet.</p>
+          <p className="auth-error">
+            Authentication is not configured on this deployment yet.
+          </p>
         )}
-
-        <p className="auth-note">
-          During Phase 6A the existing Publish key remains required until per-user
-          X and DEV connections replace the personal credentials.
-        </p>
       </section>
     </main>
   )

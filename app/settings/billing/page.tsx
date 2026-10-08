@@ -1,22 +1,17 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { BillingPanel } from '@/components/billing-panel'
-import { hasProAccess } from '@/lib/billing/entitlement'
+import { paidPlanFromSubscription } from '@/lib/billing/entitlement'
+import { getPaddleEnvironment } from '@/lib/paddle/server'
 import { createClient } from '@/lib/supabase/server'
 
-type Props = {
-  searchParams: Promise<{
-    checkout?: string
-  }>
-}
-
-export default async function BillingPage({ searchParams }: Props) {
+export default async function BillingPage() {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) redirect('/login')
+  if (!user) redirect('/login?next=/settings/billing')
 
   const { data: subscription, error } = await supabase
     .from('subscriptions')
@@ -28,8 +23,7 @@ export default async function BillingPage({ searchParams }: Props) {
 
   if (error) throw error
 
-  const params = await searchParams
-  const pro = hasProAccess(
+  const paidPlan = paidPlanFromSubscription(
     subscription
       ? {
           plan: subscription.plan,
@@ -39,12 +33,7 @@ export default async function BillingPage({ searchParams }: Props) {
       : null,
   )
 
-  const billingConfigured = Boolean(
-    process.env.PADDLE_API_KEY?.trim() &&
-      process.env.PADDLE_WEBHOOK_SECRET?.trim() &&
-      process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN?.trim() &&
-      process.env.NEXT_PUBLIC_PADDLE_PRICE_ID?.trim(),
-  )
+  const environment = getPaddleEnvironment()
 
   return (
     <main className="settings-shell">
@@ -61,6 +50,9 @@ export default async function BillingPage({ searchParams }: Props) {
         </div>
 
         <div className="settings-header-actions">
+          <Link className="auth-link" href="/pricing">
+            Pricing
+          </Link>
           <Link className="auth-link" href="/settings/connections">
             Connections
           </Link>
@@ -69,21 +61,12 @@ export default async function BillingPage({ searchParams }: Props) {
       </header>
 
       <BillingPanel
-        userId={user.id}
-        email={user.email ?? null}
-        plan={pro ? 'pro' : 'free'}
+        plan={paidPlan ?? 'free'}
         subscriptionStatus={subscription?.status ?? null}
         currentPeriodEnd={subscription?.current_period_end ?? null}
         cancelAtPeriodEnd={subscription?.cancel_at_period_end ?? false}
-        billingConfigured={billingConfigured}
         portalAvailable={Boolean(subscription?.paddle_customer_id)}
-        priceId={process.env.NEXT_PUBLIC_PADDLE_PRICE_ID?.trim() || null}
-        sandbox={process.env.PADDLE_ENV !== 'production'}
-        notice={
-          params.checkout === 'success'
-            ? 'Checkout completed. Paddle is confirming your subscription; refresh shortly if Pro is not visible yet.'
-            : null
-        }
+        environment={environment}
       />
     </main>
   )
