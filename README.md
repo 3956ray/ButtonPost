@@ -43,30 +43,28 @@ npm run runner
 
 Open `http://localhost:3000`.
 
-### Environment variables
+### Server environment (maintainers only)
 
-```bash
-BUTTONPOST_SECRET=your-private-publish-key
-X_API_KEY=...
+Use [`.env.example`](.env.example) for current variables. Hosted end users **never** supply secrets or Node.js environment variables.
+
+Key settings for a self-hosted ButtonPost server:
+
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
+SUPABASE_SECRET_KEY=...
+BUTTONPOST_APP_URL=http://localhost:3000
+BUTTONPOST_SECRET=...                       # server-side media ticket signing secret
+BUTTONPOST_CREDENTIAL_ENCRYPTION_KEY=...    # AES-GCM key for encrypted platform credentials
+X_API_KEY=...                               # your X OAuth application
 X_API_SECRET=...
-X_ACCESS_TOKEN=...
-X_ACCESS_TOKEN_SECRET=...
-# Alternative OAuth 2.0 user-context token:
-X_USER_ACCESS_TOKEN=
-X_MAX_LENGTH=280
-X_MAX_THREAD_POSTS=25
-DEVTO_API_KEY=...
 DEVTO_TAGS=ai,webdev
-DEVTO_DRAFT_ONLY=false
-# Vercel Blob: preferred OIDC setup
-BLOB_STORE_ID=store_...
-# Alternative legacy credential:
-BLOB_READ_WRITE_TOKEN=...
+DEVTO_DRAFT_ONLY=true                       # create DEV drafts during initial testing
+BLOB_STORE_ID=...                           # or BLOB_READ_WRITE_TOKEN
+PADDLE_ENV=sandbox                          # Paddle is not live yet
 ```
 
-`X_USER_ACCESS_TOKEN` must be an OAuth 2.0 **user-context** token allowed to create posts; the application-only Bearer Token will be rejected. For the quickest manual test, configure OAuth 1.0a with `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, and `X_ACCESS_TOKEN_SECRET`. `DEVTO_API_KEY` must belong to the DEV author account.
-
-For safe DEV testing, set `DEVTO_DRAFT_ONLY=true` before clicking Publish Everywhere. ButtonPost reports that result as `draft`; set it to `false` when you want the same action to publish publicly.
+Users connect X through OAuth and enter their DEV Community API key in **Connections**. Never commit secrets or ask users to paste them into public issues. Keep `DEVTO_DRAFT_ONLY=true` when first testing.
 
 ### Shared images for X + DEV
 
@@ -77,7 +75,7 @@ Local source images are uploaded directly from the browser to a **public Vercel 
 - Blob URLs must remain public because DEV articles reference them after publication.
 - ButtonPost supports Vercel Blob **OIDC** (`VERCEL_OIDC_TOKEN + BLOB_STORE_ID`) and the legacy `BLOB_READ_WRITE_TOKEN`.
 - On Vercel, OIDC is preferred: the rotating OIDC token is supplied by Vercel at runtime, while the connected Blob Store contributes `BLOB_STORE_ID`.
-- The browser receives neither the OIDC token nor the Blob read/write token. ButtonPost exchanges the Publish key for a short-lived media-only ticket, then issues a constrained presigned upload.
+- The browser receives neither the OIDC token nor the Blob read/write token. ButtonPost authenticates the user's Supabase session before issuing a short-lived media-only ticket and constrained presigned upload.
 
 Connect a **public** Blob store to the ButtonPost Vercel project. A correctly linked OIDC store should make `BLOB_STORE_ID` available to the project. Text-only X / DEV publishing continues to work without Blob storage.
 
@@ -90,7 +88,7 @@ One source post + source images
       |             |
       v             v
  Server API      Local Runner
- X / DEV        Xiaohongshu / Jike
+ X / DEV       Xiaohongshu / Jike / LearnBlockchain
       \             /
        per-platform results
 ```
@@ -105,7 +103,7 @@ npm test
 npm run build
 ```
 
-The X + DEV API pipeline and Local Runner pairing/auth flow are verified. Xiaohongshu image-note publishing is now the first browser publisher integrated into `Publish everywhere`. See [`docs/local-runner.md`](docs/local-runner.md).
+CI runs type checking, unit/integration tests and the production build. Portable Local Runner packages are validated separately on macOS and Windows. See [`docs/local-runner.md`](docs/local-runner.md) and [`docs/runner-install.md`](docs/runner-install.md).
 
 ## Open-source references
 
