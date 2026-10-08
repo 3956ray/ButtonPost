@@ -15,7 +15,7 @@
     "test": "node --experimental-strip-types --test tests/*.test.ts && npm run runner:test",
     "check": "npm run typecheck && npm run test && npm run build",
     "runner": "node runner/server.mjs",
-    "runner:test": "node --test runner/lib.test.mjs runner/adapters/xiaohongshu.test.mjs runner/adapters/jike.test.mjs runner/adapters/learnblockchain.test.mjs runner/adapters/indiehackers.test.mjs"
+    "runner:test": "node --test runner/token.test.mjs runner/lib.test.mjs runner/adapters/xiaohongshu.test.mjs runner/adapters/jike.test.mjs runner/adapters/learnblockchain.test.mjs runner/adapters/indiehackers.test.mjs"
   },
   "dependencies": {
     "@paddle/paddle-js": "1.6.5",
