@@ -115,9 +115,10 @@ export default function PrivacyPage() {
           and rate limits. No internet service can guarantee absolute security.
         </p>
         <p>
-          For private-beta support, use the ButtonPost GitHub repository. Do not
-          post passwords, API keys, payment card information, webhook secrets, or
-          other sensitive data in a public issue.
+          For private-beta support, email{' '}
+          <a href="mailto:support@buttonpost.app">support@buttonpost.app</a>.
+          Do not send passwords, API keys, payment card information, webhook
+          secrets, or other sensitive credentials by email or in a public issue.
         </p>
       </LegalSection>
     </LegalPage>
