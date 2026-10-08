@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { headers } from 'next/headers'
-import { redirect } from 'next/navigation'
 import { PricingTable } from '@/components/pricing-table'
 import { getPricingTiers } from '@/lib/billing/tiers'
 import {
@@ -22,10 +21,6 @@ export default async function PricingPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
-    redirect('/login?next=/pricing')
-  }
-
   const requestHeaders = await headers()
   const countryCode = validCountryCode(
     requestHeaders.get('x-vercel-ip-country'),
@@ -36,12 +31,16 @@ export default async function PricingPage() {
   const tiers = getPricingTiers(environment)
   const clientToken = paddleClientToken(environment)
 
-  const { data: subscription } = await supabase
-    .from('subscriptions')
-    .select('paddle_customer_id')
-    .eq('user_id', user.id)
-    .eq('environment', environment)
-    .maybeSingle()
+  const subscription = user
+    ? (
+        await supabase
+          .from('subscriptions')
+          .select('paddle_customer_id')
+          .eq('user_id', user.id)
+          .eq('environment', environment)
+          .maybeSingle()
+      ).data
+    : null
 
   return (
     <main className="pricing-shell">
@@ -49,13 +48,21 @@ export default async function PricingPage() {
         <div className="pricing-nav">
           <Link className="auth-home" href="/">← ButtonPost</Link>
           <div className="settings-header-actions">
-            <Link className="auth-link" href="/settings/billing">
-              Billing
-            </Link>
-            <Link className="auth-link" href="/settings/account">
-              Account
-            </Link>
-            <span className="auth-chip">{user.email}</span>
+            {user ? (
+              <>
+                <Link className="auth-link" href="/settings/billing">
+                  Billing
+                </Link>
+                <Link className="auth-link" href="/settings/account">
+                  Account
+                </Link>
+                <span className="auth-chip">{user.email}</span>
+              </>
+            ) : (
+              <Link className="auth-link" href="/login?next=/pricing">
+                Sign in
+              </Link>
+            )}
           </div>
         </div>
 
@@ -73,8 +80,8 @@ export default async function PricingPage() {
         clientToken={clientToken}
         paddleCustomerId={subscription?.paddle_customer_id ?? null}
         countryCode={countryCode}
-        userId={user.id}
-        email={user.email ?? null}
+        userId={user?.id ?? null}
+        email={user?.email ?? null}
       />
     </main>
   )
