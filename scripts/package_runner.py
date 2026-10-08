@@ -81,6 +81,7 @@ def package(target: str) -> Path:
                 'echo ButtonPost Runner stopped.\r\n'
                 'pause\r\n',
                 encoding="utf-8",
+                newline="",
             )
         else:
             launcher = app / "Start-ButtonPost-Runner.command"
