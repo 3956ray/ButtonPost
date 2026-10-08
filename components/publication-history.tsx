@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import {
   filterHistoryByPlatform,
   getHistoryPlatformResult,
+  getFailedHistoryPlatforms,
   listHistoryPlatforms,
   type HistoryPlatformId,
   type PublicationHistoryEntry,
@@ -13,6 +14,7 @@ import {
 type Props = {
   entries: PublicationHistoryEntry[]
   onReuse: (entry: PublicationHistoryEntry) => void
+  onRetryFailed: (entry: PublicationHistoryEntry) => void
   onClear: () => void
 }
 
@@ -62,7 +64,7 @@ function platformStatusLabel(
   return getHistoryPlatformResult(entry, platform)?.status ?? 'pending'
 }
 
-export function PublicationHistory({ entries, onReuse, onClear }: Props) {
+export function PublicationHistory({ entries, onReuse, onRetryFailed, onClear }: Props) {
   const [activePlatform, setActivePlatform] = useState<HistoryPlatformId | null>(
     null,
   )
@@ -160,6 +162,7 @@ export function PublicationHistory({ entries, onReuse, onClear }: Props) {
       ) : (
         <div className="history-list">
           {visibleEntries.map((entry) => {
+            const failedCount = getFailedHistoryPlatforms(entry).length
             const expanded = expandedIds.includes(entry.id)
             const filteredResult = activePlatform
               ? getHistoryPlatformResult(entry, activePlatform)
@@ -195,6 +198,16 @@ export function PublicationHistory({ entries, onReuse, onClear }: Props) {
                         onClick={() => toggleExpanded(entry.id)}
                       >
                         {expanded ? 'Hide details' : 'Details'}
+                      </button>
+                    ) : null}
+                    {failedCount > 0 ? (
+                      <button
+                        type="button"
+                        className="history-reuse"
+                        title="Prepares only failed platforms. Review and click Publish to retry."
+                        onClick={() => onRetryFailed(entry)}
+                      >
+                        Retry failed ({failedCount})
                       </button>
                     ) : null}
                     <button
