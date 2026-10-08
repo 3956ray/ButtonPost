@@ -38,6 +38,8 @@ jobs:
         run: node --test runner/token.test.mjs runner/server.test.mjs runner/lib.test.mjs
       - name: Package runner with Node runtime
         run: python scripts/package_runner.py --target ${{ matrix.target }}
+      - name: Smoke-test extracted standalone package
+        run: python scripts/smoke_runner_package.py --target ${{ matrix.target }}
       - uses: actions/upload-artifact@v4
         with:
           name: buttonpost-runner-${{ matrix.target }}
