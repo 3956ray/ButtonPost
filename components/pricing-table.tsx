@@ -19,7 +19,7 @@ type Props = {
   clientToken: string
   paddleCustomerId?: string | null
   countryCode?: string
-  userId: string
+  userId: string | null
   email: string | null
 }
 
@@ -137,6 +137,11 @@ export function PricingTable({
   }, [activePriceIds, countryCode])
 
   async function subscribe(tier: Tier) {
+    if (!userId) {
+      window.location.assign('/login?next=/pricing')
+      return
+    }
+
     const shownPrice = prices[tier.name]
     if (!shownPrice) {
       setError('Wait for Paddle to load the localized price first.')
