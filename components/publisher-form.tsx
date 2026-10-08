@@ -989,6 +989,11 @@ export function PublisherForm({
           </label>
 
         </div>
+        {ACTIVE_LOCAL_DESTINATIONS.some((platform) => !localReady[platform]) ? (
+          <a className="local-setup-link" href="#local-runner-setup">
+            Enable more platforms <span aria-hidden="true">↗</span>
+          </a>
+        ) : null}
 
         {signedIn ? (
           <a className="connections-shortcut" href="/settings/connections">
