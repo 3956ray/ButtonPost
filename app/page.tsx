@@ -104,6 +104,7 @@ export default async function HomePage() {
 
   return (
     <main className={'shell ' + (signedIn ? 'shell--signed-in' : 'shell--visitor')}>
+      <a className="skip-link" href="#workspace-title">Skip to publishing editor</a>
       <header className="site-header">
         <div className="brand-lockup">
           <Link className="brand-home" href="/" aria-label="ButtonPost home">
