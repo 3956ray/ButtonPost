@@ -21,7 +21,7 @@ export default async function BillingPage() {
       )
       .eq('user_id', user.id)
       .maybeSingle(),
-    getCloudPublishUsage(supabase),
+    getCloudPublishUsage(user.id),
   ])
 
   if (error) throw error

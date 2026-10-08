@@ -32,7 +32,7 @@ export async function POST() {
   }
 
   try {
-    const usage = await getCloudPublishUsage(supabase)
+    const usage = await getCloudPublishUsage(user.id)
 
     if (
       planEnforcementEnabled() &&
