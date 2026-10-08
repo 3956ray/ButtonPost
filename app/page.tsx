@@ -107,7 +107,23 @@ export default async function HomePage() {
         <h1>Write once. Publish everywhere.</h1>
         <p>
           One source post. Platform-specific formatting only. Publish to every selected destination in one action.
+          X and DEV work directly from the web — no installation required.
         </p>
+        {auth.configured && !auth.userId ? (
+          <div className="hero-onboarding">
+            <Link className="hero-onboarding-primary" href="/login?next=/">
+              Start publishing →
+            </Link>
+            <span>Sign in, connect a platform, and publish from your browser.</span>
+          </div>
+        ) : auth.configured && auth.userId && auth.connectedPlatforms.length === 0 ? (
+          <div className="hero-onboarding">
+            <Link className="hero-onboarding-primary" href="/settings/connections">
+              Connect X or DEV →
+            </Link>
+            <span>Local browser platforms are optional and available below.</span>
+          </div>
+        ) : null}
       </header>
 
       <PublisherForm
