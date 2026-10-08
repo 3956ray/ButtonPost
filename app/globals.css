@@ -1560,3 +1560,17 @@ button, input, textarea { font: inherit; }
     text-align: left;
   }
 }
+
+
+/* Retry a failed publish without inadvertently reposting successful destinations. */
+.result-retry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.result-retry .history-reuse { min-height: 36px; padding-inline: 14px; }
+.result-retry > span { color: var(--muted); font-size: 12px; line-height: 1.5; }
