@@ -4,6 +4,7 @@ import {
   PUBLICATION_HISTORY_LIMIT,
   filterHistoryByPlatform,
   getHistoryPlatformResult,
+  getFailedHistoryPlatforms,
   listHistoryPlatforms,
   parsePublicationHistory,
   prependHistoryEntry,
@@ -87,4 +88,20 @@ test('publication history can be drilled down by platform without splitting publ
     getHistoryPlatformResult(first, 'devto')?.status,
     'pending',
   )
+})
+
+test('retry selects only failed destinations from an attempt', () => {
+  const attempt: PublicationHistoryEntry = {
+    ...entry('retry'),
+    selected: ['x', 'devto', 'jike', 'xiaohongshu'],
+    results: [
+      { platform: 'x', status: 'published' },
+      { platform: 'devto', status: 'failed', error: 'rate limited' },
+      { platform: 'jike', status: 'reviewing' },
+      { platform: 'xiaohongshu', status: 'failed', error: 'timeout' },
+      { platform: 'learnblockchain', status: 'failed', error: 'not selected' },
+    ],
+  }
+  assert.deepEqual(getFailedHistoryPlatforms(attempt), ['devto', 'xiaohongshu'])
+  assert.deepEqual(getFailedHistoryPlatforms(entry('none')), [])
 })
