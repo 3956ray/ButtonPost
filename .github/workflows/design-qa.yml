@@ -16,6 +16,10 @@ jobs:
   browser-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 12
+    env:
+      # Public dummy values exercise logged-out SaaS onboarding without real credentials.
+      NEXT_PUBLIC_SUPABASE_URL: https://demo-design-preview.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: demo-public-key-no-access
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
