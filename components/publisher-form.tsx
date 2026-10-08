@@ -129,7 +129,7 @@ export function PublisherForm({
       const ready: Record<string, boolean> = {}
       if (url && token) {
         const headers = { Authorization: 'Bearer ' + token }
-        const base = url.replace(/\\/$/, '')
+        const base = url.replace(/\/$/, '')
         try {
           const parsed = new URL(base)
           if (parsed.protocol !== 'http:' || !['127.0.0.1', 'localhost'].includes(parsed.hostname)) {
@@ -222,7 +222,7 @@ export function PublisherForm({
     setSelected(
       entry.selected.filter(
         (platform) =>
-          serverPlatformIds.has(platform) || ACTIVE_DESTINATION_SET.has(platform),
+          serverPlatformIds.has(platform) || (ACTIVE_DESTINATION_SET.has(platform) && localReady[platform] === true),
       ),
     )
     setImages([])
