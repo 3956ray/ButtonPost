@@ -106,6 +106,11 @@ export async function POST(request: Request) {
 
   const rawBody = await request.text()
 
+  console.info('[paddle-webhook] received', {
+    hasSignature: Boolean(signature),
+    bodyLength: rawBody.length,
+  })
+
   try {
     const paddle = createPaddleServerClient()
     const event = await paddle.webhooks.unmarshal(
@@ -113,6 +118,11 @@ export async function POST(request: Request) {
       webhookSecret,
       signature,
     )
+
+    console.info('[paddle-webhook] verified', {
+      eventId: event.eventId,
+      eventType: event.eventType,
+    })
 
     const admin = createAdminClient()
 
@@ -147,8 +157,21 @@ export async function POST(request: Request) {
 
     if (auditError) throw auditError
 
+    console.info('[paddle-webhook] processed', {
+      eventId: event.eventId,
+      eventType: event.eventType,
+    })
+
     return NextResponse.json({ ok: true })
-  } catch {
+  } catch (cause) {
+    console.error('[paddle-webhook] failed', {
+      errorName: cause instanceof Error ? cause.name : 'UnknownError',
+      errorMessage:
+        cause instanceof Error
+          ? cause.message.slice(0, 300)
+          : 'Unknown webhook failure',
+    })
+
     return NextResponse.json({ error: 'Invalid webhook.' }, { status: 400 })
   }
 }
