@@ -1,4 +1,3 @@
-import { createCipheriv, createHash, randomBytes } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
@@ -124,22 +123,16 @@ function isJunkDiscount(discount: Discount) {
   return /\b(test|junk|dummy|sandbox|example|demo)\b/.test(text)
 }
 
-function seal(value: unknown, secret: string) {
-  const key = createHash('sha256').update(secret).digest()
-  const iv = randomBytes(12)
-  const cipher = createCipheriv('aes-256-gcm', key, iv)
-  const plaintext = Buffer.from(JSON.stringify(value), 'utf8')
-  const ciphertext = Buffer.concat([
-    cipher.update(plaintext),
-    cipher.final(),
-  ])
-  const tag = cipher.getAuthTag()
+function xorSeal(value: string, secret: string) {
+  const input = Buffer.from(value, 'utf8')
+  const key = Buffer.from(secret, 'utf8')
+  const output = Buffer.alloc(input.length)
 
-  return [
-    iv.toString('base64url'),
-    tag.toString('base64url'),
-    ciphertext.toString('base64url'),
-  ].join('.')
+  for (let index = 0; index < input.length; index += 1) {
+    output[index] = input[index] ^ key[index % key.length]
+  }
+
+  return output.toString('base64url')
 }
 
 export async function GET(request: NextRequest) {
@@ -442,23 +435,23 @@ export async function GET(request: NextRequest) {
     ).data
   }
 
-  const result = {
+  return NextResponse.json({
     ok: true,
     liveProducts: productIds,
     sandboxToLivePriceIds: priceMap,
     livePriceEnvValues,
     migratedDiscounts: discountMap,
     skippedSandboxDiscountCount: sandboxDiscounts.length - eligible.length,
-    liveClientToken: { id: token.id, token: token.token },
+    liveClientToken: {
+      id: token.id,
+      tokenXor: xorSeal(token.token, migrationSecret),
+    },
     liveWebhook: {
       id: webhook.id,
-      endpointSecret: webhook.endpoint_secret_key || null,
+      endpointSecretXor: webhook.endpoint_secret_key
+        ? xorSeal(webhook.endpoint_secret_key, migrationSecret)
+        : null,
       destination: webhook.destination,
     },
-  }
-
-  return NextResponse.json({
-    ok: true,
-    sealed: seal(result, migrationSecret),
   })
 }
