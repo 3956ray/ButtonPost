@@ -56,7 +56,7 @@ export async function POST() {
     )
   }
 
-  const ticket = createMediaUploadTicket()
+  const ticket = createMediaUploadTicket(user.id)
   if (!ticket) {
     return Response.json(
       { error: 'Server media ticket signing is not configured.' },
@@ -64,5 +64,5 @@ export async function POST() {
     )
   }
 
-  return Response.json({ ticket })
+  return Response.json(ticket)
 }

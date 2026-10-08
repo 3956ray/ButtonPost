@@ -1,45 +1,107 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 
 const PURPOSE = 'buttonpost-media-upload'
+const NAMESPACE_PURPOSE = 'buttonpost-media-namespace'
 const TTL_MS = 5 * 60 * 1000
 
 function signingSecret(): string | null {
   return process.env.BUTTONPOST_SECRET?.trim() || null
 }
 
-function signature(expiresAt: string, nonce: string, secret: string): string {
+function mediaNamespace(userId: string, secret: string) {
   return createHmac('sha256', secret)
-    .update(PURPOSE + ':' + expiresAt + ':' + nonce)
+    .update(NAMESPACE_PURPOSE + ':' + userId)
+    .digest('base64url')
+    .slice(0, 32)
+}
+
+function signature(
+  namespace: string,
+  expiresAt: string,
+  nonce: string,
+  secret: string,
+): string {
+  return createHmac('sha256', secret)
+    .update(PURPOSE + ':' + namespace + ':' + expiresAt + ':' + nonce)
     .digest('base64url')
 }
 
-export function createMediaUploadTicket(): string | null {
+export type MediaUploadTicket = {
+  ticket: string
+  prefix: string
+}
+
+export type VerifiedMediaUploadTicket = {
+  namespace: string
+  prefix: string
+}
+
+export function mediaPrefixForUser(userId: string): string | null {
   const secret = signingSecret()
   if (!secret) return null
 
-  const expiresAt = String(Date.now() + TTL_MS)
-  const nonce = randomBytes(12).toString('base64url')
-  const sig = signature(expiresAt, nonce, secret)
-
-  return [expiresAt, nonce, sig].join('.')
+  const namespace = mediaNamespace(userId, secret)
+  return `buttonpost/users/${namespace}/`
 }
 
-export function verifyMediaUploadTicket(ticket: unknown): boolean {
-  if (typeof ticket !== 'string') return false
+export function createMediaUploadTicket(
+  userId: string,
+): MediaUploadTicket | null {
+  const secret = signingSecret()
+  if (!secret) return null
+
+  const namespace = mediaNamespace(userId, secret)
+  const prefix = `buttonpost/users/${namespace}/`
+  const expiresAt = String(Date.now() + TTL_MS)
+  const nonce = randomBytes(12).toString('base64url')
+  const sig = signature(namespace, expiresAt, nonce, secret)
+
+  return {
+    ticket: [namespace, expiresAt, nonce, sig].join('.'),
+    prefix,
+  }
+}
+
+export function verifyMediaUploadTicket(
+  ticket: unknown,
+): VerifiedMediaUploadTicket | null {
+  if (typeof ticket !== 'string') return null
 
   const secret = signingSecret()
-  if (!secret) return false
+  if (!secret) return null
 
-  const [expiresAt, nonce, suppliedSignature, ...rest] = ticket.split('.')
-  if (!expiresAt || !nonce || !suppliedSignature || rest.length) return false
+  const [namespace, expiresAt, nonce, suppliedSignature, ...rest] =
+    ticket.split('.')
+
+  if (
+    !namespace ||
+    !expiresAt ||
+    !nonce ||
+    !suppliedSignature ||
+    rest.length
+  ) {
+    return null
+  }
+
+  if (!/^[A-Za-z0-9_-]{32}$/.test(namespace)) return null
 
   const expires = Number(expiresAt)
-  if (!Number.isFinite(expires) || expires < Date.now()) return false
+  if (!Number.isFinite(expires) || expires < Date.now()) return null
 
-  const expectedSignature = signature(expiresAt, nonce, secret)
+  const expectedSignature = signature(
+    namespace,
+    expiresAt,
+    nonce,
+    secret,
+  )
   const supplied = Buffer.from(suppliedSignature)
   const expected = Buffer.from(expectedSignature)
 
-  if (supplied.length !== expected.length) return false
-  return timingSafeEqual(supplied, expected)
+  if (supplied.length !== expected.length) return null
+  if (!timingSafeEqual(supplied, expected)) return null
+
+  return {
+    namespace,
+    prefix: `buttonpost/users/${namespace}/`,
+  }
 }
