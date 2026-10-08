@@ -6,27 +6,37 @@ ButtonPost is a personal-first, open-source multi-platform publishing tool. Writ
 
 The product is intentionally **not** a content-variant generator. Platform adapters can perform mechanical compatibility work (Markdown to plain text, HTML cleanup, media upload, field mapping), but the source content remains one post.
 
-## MVP status
+## Web-first MVP (no installation needed)
+
+Visit [buttonpost.app](https://buttonpost.app), sign in, and connect X (OAuth) or DEV Community (personal API key) in **Connections**. Write your content, select connected destinations, and publish. **No Local Runner or command line is needed for X and DEV.**
+
+For browser-based destinations (Xiaohongshu, Jike, LearnBlockchain), the optional Local Runner uses your existing Chrome login on your own computer. They become selectable only after both Runner pairing and platform login are verified. See [How to install the optional Runner](docs/runner-install.md) for portable Mac/Windows launchers, developer setup, and [AI-assisted installation](docs/agent-runner-setup.md).
+
+Publishing results are tracked separately per platform. You can reuse previous content and prepare a **failed-only retry** from Publication History, which excludes already published destinations and requires a final click to publish again. This is important because an apparent network failure can still have published remotely.
+
+## MVP functionality
 
 The first runnable slice supports:
 
 - **X** through the official X API, including up to 4 source images per first post and automatic reply threads when the source exceeds the single-post limit.
 - **DEV Community** through the official Forem article API, including public source images and a cover image.
 - Parallel publishing with per-platform published / draft / failed / skipped results.
-- A server-side publish key so a deployed personal instance is not an open publishing endpoint.
+- Authenticated, per-user X/DEV connections and encrypted stored credentials (Supabase).
+- Publication history with per-platform results and failed-only retry preparation (browser-local storage).
+- Optional local Chrome Runner for Xiaohongshu, Jike, and LearnBlockchain, with review-before-publish.
 
-Phase 2/3 add a **Local Runner** so browser-automated platforms can execute on the user's own computer without sending browser cookies to Vercel. Xiaohongshu and Jike now use local Chrome sessions with review-before-publish flows.
+The Local Runner runs on your own computer without uploading browser cookies to Vercel. **You do not need it to publish from the web to X/DEV.** Runner downloads are produced by [GitHub Actions](.github/workflows/runner-release.yml) for signed-off release tags. They are portable, currently unsigned beta launchers—not yet native signed app installers.
 
-## Local setup
+## For contributors: run the full stack locally
 
-Requires Node.js 22+.
+Requires Node.js 22+. Ordinary cloud users do not need Node.js.
 
 ```bash
 cp .env.example .env.local
 npm install
 npm run dev
 
-# In another terminal, for local/browser publishers:
+# Optional, only for local/browser publishers:
 # Google Chrome must be installed locally.
 npm run runner
 ```
@@ -108,4 +118,4 @@ AGPL-3.0. See [`LICENSE`](LICENSE).
 
 ### Publish safety gate
 
-The **Publish key** is required before any **Publish everywhere** action, including Local Runner-only destinations. For local browser publishers it is only a UI authorization/safety gate and is not sent to the Local Runner; X / DEV and server media continue to validate/use it on the server.
+Current hosted cloud publishing uses Supabase sign-in, per-user encrypted platform credentials and server-side authorization; it does not ask end users for a shared Publish key. The separate Local Runner uses a private token bound to the local computer. The portable launcher automatically pairs via a URL fragment on first start; the fragment is cleared from the browser address immediately. See [Runner security and setup](docs/runner-install.md).
