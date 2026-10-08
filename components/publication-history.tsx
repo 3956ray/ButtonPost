@@ -95,12 +95,11 @@ export function PublicationHistory({ entries, onReuse, onRetryFailed, onClear }:
     <section className="history-card">
       <div className="history-heading">
         <div>
-          <span className="eyebrow">Local history</span>
+          <span className="eyebrow">YOUR PRIVATE ACTIVITY</span>
           <h2>Publication history</h2>
           <p>
-            One <strong>Publish everywhere</strong> action is one history record.
-            Each record shows exactly which platforms were included; choose a
-            platform below to view only that platform&apos;s publishing history.
+            See what was published, which platform needs attention, and reuse
+            a post without starting over. Filter your activity by destination.
           </p>
         </div>
         {entries.length > 0 ? (
@@ -153,7 +152,7 @@ export function PublicationHistory({ entries, onReuse, onRetryFailed, onClear }:
 
       {entries.length === 0 ? (
         <div className="history-empty">
-          Your next publish attempt will appear here and remain after a page refresh.
+          Nothing here yet. Your first delivery report will appear after you publish.
         </div>
       ) : visibleEntries.length === 0 ? (
         <div className="history-empty">

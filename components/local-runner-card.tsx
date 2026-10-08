@@ -308,7 +308,7 @@ export function LocalRunnerCard() {
           <span className="eyebrow">EXPAND YOUR REACH / OPTIONAL</span>
           <h2>More platforms, when you need them.</h2>
           <p>
-            X and DEV need no installation. To publish to 小红书, 即刻 or 登链社区, add our private on-device publishing helper.
+            X and DEV need no installation. For Xiaohongshu, Jike, or LearnBlockchain, enable the optional on-device publishing helper.
           </p>
         </div>
         <span className={'runner-state ' + state}>

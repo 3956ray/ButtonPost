@@ -950,9 +950,9 @@ export function PublisherForm({
             <span className="platform-copy">
               <span className="platform-name">
                 <span className="platform-glyph glyph-xhs" aria-hidden="true">XH</span>
-                Xiaohongshu <span className="platform-name-secondary">小红书</span>
+                Xiaohongshu
               </span>
-              <span className="platform-note">{localReady['xiaohongshu'] ? 'Local Runner · review before publish' : 'Needs optional Local Runner + login · see below'}</span>
+              <span className="platform-note">{localReady['xiaohongshu'] ? 'Local Runner · review before publish' : 'Requires local setup'}</span>
             </span>
           </label>
 
@@ -966,9 +966,9 @@ export function PublisherForm({
             <span className="platform-copy">
               <span className="platform-name">
                 <span className="platform-glyph glyph-jike" aria-hidden="true">JK</span>
-                Jike <span className="platform-name-secondary">即刻</span>
+                Jike
               </span>
-              <span className="platform-note">{localReady['jike'] ? 'Local Runner · review before send' : 'Needs optional Local Runner + login · see below'}</span>
+              <span className="platform-note">{localReady['jike'] ? 'Local Runner · review before send' : 'Requires local setup'}</span>
             </span>
           </label>
 
@@ -982,9 +982,9 @@ export function PublisherForm({
             <span className="platform-copy">
               <span className="platform-name">
                 <span className="platform-glyph glyph-lbc" aria-hidden="true">LB</span>
-                LearnBlockchain <span className="platform-name-secondary">登链社区</span>
+                LearnBlockchain
               </span>
-              <span className="platform-note">{localReady['learnblockchain'] ? 'Local Runner · article review before publish' : 'Needs optional Local Runner + login · see below'}</span>
+              <span className="platform-note">{localReady['learnblockchain'] ? 'Local Runner · article review before publish' : 'Requires local setup'}</span>
             </span>
           </label>
 
