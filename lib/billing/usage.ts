@@ -1,9 +1,9 @@
 import 'server-only'
-import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   isButtonPostPlan,
   type ButtonPostPlan,
 } from '@/lib/billing/plans'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export type CloudPublishUsage = {
   plan: ButtonPostPlan
@@ -34,7 +34,6 @@ export function planEnforcementEnabled() {
   if (current === 'true') return true
   if (current === 'false') return false
 
-  // Backward compatibility for the Phase 6D flag.
   return process.env.BUTTONPOST_REQUIRE_PRO === 'true'
 }
 
@@ -58,9 +57,13 @@ function parseUsageRow(row: UsageRow | null | undefined): CloudPublishUsage {
 }
 
 export async function getCloudPublishUsage(
-  supabase: SupabaseClient,
+  userId: string,
 ): Promise<CloudPublishUsage> {
-  const { data, error } = await supabase.rpc('get_buttonpost_publish_usage')
+  const admin = createAdminClient()
+  const { data, error } = await admin.rpc(
+    'server_get_buttonpost_publish_usage',
+    { p_user_id: userId },
+  )
 
   if (error) throw error
 
@@ -69,10 +72,12 @@ export async function getCloudPublishUsage(
 }
 
 export async function reserveCloudPublish(
-  supabase: SupabaseClient,
+  userId: string,
 ): Promise<CloudPublishReservation> {
-  const { data, error } = await supabase.rpc(
-    'reserve_buttonpost_cloud_publish',
+  const admin = createAdminClient()
+  const { data, error } = await admin.rpc(
+    'server_reserve_buttonpost_cloud_publish',
+    { p_user_id: userId },
   )
 
   if (error) throw error
@@ -107,12 +112,16 @@ export async function reserveCloudPublish(
 }
 
 export async function releaseCloudPublish(
-  supabase: SupabaseClient,
+  userId: string,
   usageId: string,
 ) {
-  const { data, error } = await supabase.rpc(
-    'release_buttonpost_cloud_publish',
-    { p_usage_id: usageId },
+  const admin = createAdminClient()
+  const { data, error } = await admin.rpc(
+    'server_release_buttonpost_cloud_publish',
+    {
+      p_user_id: userId,
+      p_usage_id: usageId,
+    },
   )
 
   if (error) throw error

@@ -142,7 +142,7 @@ export async function POST(request: Request) {
 
   let reservation
   try {
-    reservation = await reserveCloudPublish(supabase)
+    reservation = await reserveCloudPublish(user.id)
   } catch {
     return Response.json(
       { error: 'Could not verify ButtonPost cloud publishing allowance.' },
@@ -187,7 +187,7 @@ export async function POST(request: Request) {
 
     if (reservation.usageId && !counted) {
       try {
-        await releaseCloudPublish(supabase, reservation.usageId)
+        await releaseCloudPublish(user.id, reservation.usageId)
       } catch {
         // Publishing results are more important than a best-effort quota
         // rollback. A later support review can reconcile an isolated row.
@@ -209,7 +209,7 @@ export async function POST(request: Request) {
   } catch {
     if (reservation.usageId) {
       try {
-        await releaseCloudPublish(supabase, reservation.usageId)
+        await releaseCloudPublish(user.id, reservation.usageId)
       } catch {
         // Best-effort rollback only.
       }
