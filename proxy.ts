@@ -17,6 +17,25 @@ function productionCanonicalOrigin() {
 export async function proxy(request: NextRequest) {
   const canonicalOrigin = productionCanonicalOrigin()
 
+  // Supabase falls back to the Site URL when an OAuth redirect URL is not
+  // accepted by its allow-list. Recover that PKCE flow instead of rendering
+  // the homepage with an unused ?code=... query parameter.
+  if (request.nextUrl.pathname === '/') {
+    const code = request.nextUrl.searchParams.get('code')
+
+    if (
+      code &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        code,
+      )
+    ) {
+      const target = new URL('/auth/callback', canonicalOrigin ?? request.nextUrl.origin)
+      target.searchParams.set('code', code)
+      target.searchParams.set('next', '/')
+      return NextResponse.redirect(target, 307)
+    }
+  }
+
   if (canonicalOrigin && request.nextUrl.origin !== canonicalOrigin) {
     const target = new URL(
       request.nextUrl.pathname + request.nextUrl.search,
