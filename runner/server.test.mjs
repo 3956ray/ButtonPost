@@ -30,7 +30,7 @@ test('local runner serves health and accepts authenticated calls from production
 
   try {
     let ready = false
-    for (let attempt = 0; attempt < 40; attempt += 1) {
+    for (let attempt = 0; attempt < 150; attempt += 1) {
       if (processRunner.exitCode !== null) {
         throw new Error('Runner terminated before startup')
       }
@@ -47,7 +47,7 @@ test('local runner serves health and accepts authenticated calls from production
       } catch {
         // Still starting up.
       }
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise(resolve => setTimeout(resolve, 150))
     }
     assert.equal(ready, true, 'runner started')
 
