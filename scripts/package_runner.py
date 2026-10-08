@@ -42,7 +42,7 @@ def package(target: str) -> Path:
                 entry = Path(folder) / name
                 # npm may create self-referential workspace links/junctions,
                 # particularly node_modules/buttonpost on Windows.
-                if entry.is_symlink() or entry.is_junction():
+                if entry.is_symlink() or getattr(entry, 'is_junction', lambda: False)():
                     ignored.add(name)
                 if Path(folder).name == "node_modules" and name in {"buttonpost", ".bin"}:
                     ignored.add(name)
