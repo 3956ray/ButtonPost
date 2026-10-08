@@ -1,6 +1,10 @@
 import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { PaidPlan } from '@/lib/billing/tiers'
+import {
+  isPaidPlan,
+  type ButtonPostPlan,
+  type PaidPlan,
+} from '@/lib/billing/plans'
 
 export type SubscriptionEntitlement = {
   plan: string | null
@@ -9,19 +13,19 @@ export type SubscriptionEntitlement = {
 }
 
 const ACTIVE_STATUSES = new Set(['active', 'trialing', 'past_due'])
-const PAID_PLANS = new Set<PaidPlan>(['starter', 'pro', 'advanced'])
-
-export function publishingRequiresPaidPlan() {
-  return process.env.BUTTONPOST_REQUIRE_PRO === 'true'
-}
 
 export function paidPlanFromSubscription(
   subscription: SubscriptionEntitlement | null | undefined,
 ): PaidPlan | null {
   if (!subscription?.plan || !subscription.status) return null
   if (!ACTIVE_STATUSES.has(subscription.status)) return null
-  if (!PAID_PLANS.has(subscription.plan as PaidPlan)) return null
-  return subscription.plan as PaidPlan
+  return isPaidPlan(subscription.plan) ? subscription.plan : null
+}
+
+export function planFromSubscription(
+  subscription: SubscriptionEntitlement | null | undefined,
+): ButtonPostPlan {
+  return paidPlanFromSubscription(subscription) ?? 'free'
 }
 
 export function hasPaidAccess(
@@ -48,14 +52,4 @@ export async function getSubscriptionEntitlement(
     status: data.status,
     currentPeriodEnd: data.current_period_end,
   }
-}
-
-export async function canUseCloudPublishing(
-  supabase: SupabaseClient,
-  userId: string,
-) {
-  if (!publishingRequiresPaidPlan()) return true
-
-  const subscription = await getSubscriptionEntitlement(supabase, userId)
-  return hasPaidAccess(subscription)
 }

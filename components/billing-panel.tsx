@@ -2,22 +2,21 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import type { PaidPlan } from '@/lib/billing/tiers'
+import {
+  PLAN_ENTITLEMENTS,
+  type ButtonPostPlan,
+} from '@/lib/billing/plans'
 
 type Props = {
-  plan: 'free' | PaidPlan
+  plan: ButtonPostPlan
   subscriptionStatus: string | null
   currentPeriodEnd: string | null
   cancelAtPeriodEnd: boolean
   portalAvailable: boolean
   environment: 'sandbox' | 'production'
-}
-
-const PLAN_LABELS: Record<'free' | PaidPlan, string> = {
-  free: 'Free',
-  starter: 'Starter',
-  pro: 'Pro',
-  advanced: 'Advanced',
+  usageUsed: number
+  usageMonthlyLimit: number
+  usageResetAt: string
 }
 
 export function BillingPanel({
@@ -27,9 +26,13 @@ export function BillingPanel({
   cancelAtPeriodEnd,
   portalAvailable,
   environment,
+  usageUsed,
+  usageMonthlyLimit,
+  usageResetAt,
 }: Props) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const entitlement = PLAN_ENTITLEMENTS[plan]
 
   async function manageBilling() {
     setBusy(true)
@@ -65,6 +68,15 @@ export function BillingPanel({
       }).format(new Date(currentPeriodEnd))
     : null
 
+  const resetLabel = new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+  }).format(new Date(usageResetAt))
+
+  const usagePercent =
+    usageMonthlyLimit > 0
+      ? Math.min(100, Math.round((usageUsed / usageMonthlyLimit) * 100))
+      : 0
+
   const paid = plan !== 'free'
 
   return (
@@ -81,53 +93,76 @@ export function BillingPanel({
         <div className="billing-card-head">
           <div>
             <span className="eyebrow">Current plan</span>
-            <h2>{PLAN_LABELS[plan]}</h2>
+            <h2>{entitlement.label}</h2>
           </div>
           <span className={'billing-plan ' + (paid ? 'pro' : '')}>
-            {PLAN_LABELS[plan]}
+            {entitlement.label}
           </span>
         </div>
 
         {paid ? (
-          <>
-            <p>
-              Your Paddle subscription is{' '}
-              <strong>{subscriptionStatus || 'active'}</strong>.
-              {periodLabel
-                ? ` Current billing period ends ${periodLabel}.`
-                : ''}
-              {cancelAtPeriodEnd
-                ? ' Cancellation is scheduled for the end of the billing period.'
-                : ''}
-            </p>
-
-            <div className="billing-actions-row">
-              <Link className="billing-primary welcome-link" href="/pricing">
-                View plans
-              </Link>
-              {portalAvailable ? (
-                <button
-                  type="button"
-                  className="billing-secondary"
-                  disabled={busy}
-                  onClick={manageBilling}
-                >
-                  {busy ? 'Opening…' : 'Manage billing'}
-                </button>
-              ) : null}
-            </div>
-          </>
+          <p>
+            Your Paddle subscription is{' '}
+            <strong>{subscriptionStatus || 'active'}</strong>.
+            {periodLabel
+              ? ` Current billing period ends ${periodLabel}.`
+              : ''}
+            {cancelAtPeriodEnd
+              ? ' Cancellation is scheduled for the end of the billing period.'
+              : ''}
+          </p>
         ) : (
-          <>
-            <p>
-              Choose Starter, Pro, or Advanced on the pricing page. Checkout and
-              localized totals are handled by Paddle.
-            </p>
-            <Link className="billing-primary welcome-link" href="/pricing">
-              View pricing
-            </Link>
-          </>
+          <p>
+            Free includes a small cloud publishing allowance so you can test the
+            full ButtonPost workflow before subscribing. Local Runner publishing
+            stays unlimited.
+          </p>
         )}
+
+        <div className="usage-block">
+          <div className="usage-heading">
+            <div>
+              <span className="eyebrow">Cloud publishing this month</span>
+              <strong>
+                {usageUsed} / {usageMonthlyLimit}
+              </strong>
+            </div>
+            <span>Resets {resetLabel}</span>
+          </div>
+
+          <div
+            className="usage-track"
+            role="progressbar"
+            aria-label="Monthly cloud publishing usage"
+            aria-valuemin={0}
+            aria-valuemax={usageMonthlyLimit}
+            aria-valuenow={usageUsed}
+          >
+            <span style={{ width: `${usagePercent}%` }} />
+          </div>
+
+          <p className="usage-note">
+            One cloud publish batch is one ButtonPost server publish action.
+            Publishing to X and DEV together still counts once. Local Runner
+            destinations never consume this allowance.
+          </p>
+        </div>
+
+        <div className="billing-actions-row">
+          <Link className="billing-primary welcome-link" href="/pricing">
+            {paid ? 'View plans' : 'Upgrade'}
+          </Link>
+          {portalAvailable ? (
+            <button
+              type="button"
+              className="billing-secondary"
+              disabled={busy}
+              onClick={manageBilling}
+            >
+              {busy ? 'Opening…' : 'Manage billing'}
+            </button>
+          ) : null}
+        </div>
       </section>
     </div>
   )

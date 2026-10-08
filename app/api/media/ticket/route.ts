@@ -1,4 +1,7 @@
-import { canUseCloudPublishing } from '@/lib/billing/entitlement'
+import {
+  getCloudPublishUsage,
+  planEnforcementEnabled,
+} from '@/lib/billing/usage'
 import { createMediaUploadTicket } from '@/lib/security/media-ticket'
 import {
   consumeRateLimit,
@@ -29,19 +32,28 @@ export async function POST() {
   }
 
   try {
-    const allowed = await canUseCloudPublishing(supabase, user.id)
-    if (!allowed) {
+    const usage = await getCloudPublishUsage(supabase)
+
+    if (
+      planEnforcementEnabled() &&
+      usage.used >= usage.monthlyLimit
+    ) {
       return Response.json(
         {
-          error: 'A paid ButtonPost plan is required for cloud media uploads.',
-          code: 'subscription_required',
+          error:
+            `Monthly cloud publishing limit reached (${usage.used}/${usage.monthlyLimit}). ` +
+            'Upgrade your plan or wait for the monthly reset before uploading cloud media.',
+          code: 'plan_limit_reached',
+          used: usage.used,
+          monthlyLimit: usage.monthlyLimit,
+          resetAt: usage.resetAt,
         },
         { status: 402 },
       )
     }
   } catch {
     return Response.json(
-      { error: 'Could not verify ButtonPost subscription status.' },
+      { error: 'Could not verify ButtonPost cloud publishing allowance.' },
       { status: 503 },
     )
   }

@@ -1447,3 +1447,86 @@ button, input, textarea { font: inherit; }
     justify-content: flex-start;
   }
 }
+
+
+/* Phase 6F · plan usage */
+.usage-block {
+  margin-top: 22px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+.usage-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+.usage-heading > div {
+  display: grid;
+  gap: 4px;
+}
+.usage-heading strong {
+  font-size: 24px;
+  letter-spacing: -.035em;
+}
+.usage-heading > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 750;
+}
+.usage-track {
+  width: 100%;
+  height: 8px;
+  margin-top: 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #dedbd4;
+}
+.usage-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 220ms ease;
+}
+.usage-note {
+  margin-top: 10px !important;
+  font-size: 11px !important;
+}
+.pricing-free-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 0 0 18px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.pricing-free-note > div {
+  display: grid;
+  gap: 4px;
+}
+.pricing-free-note strong {
+  font-size: 14px;
+  letter-spacing: -.015em;
+}
+.pricing-free-note > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: right;
+}
+@media (max-width: 680px) {
+  .usage-heading,
+  .pricing-free-note {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .pricing-free-note > span {
+    text-align: left;
+  }
+}

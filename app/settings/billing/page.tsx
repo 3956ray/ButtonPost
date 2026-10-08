@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { BillingPanel } from '@/components/billing-panel'
-import { paidPlanFromSubscription } from '@/lib/billing/entitlement'
+import { getCloudPublishUsage } from '@/lib/billing/usage'
 import { getPaddleEnvironment } from '@/lib/paddle/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -13,25 +13,18 @@ export default async function BillingPage() {
 
   if (!user) redirect('/login?next=/settings/billing')
 
-  const { data: subscription, error } = await supabase
-    .from('subscriptions')
-    .select(
-      'plan,status,current_period_end,cancel_at_period_end,paddle_customer_id',
-    )
-    .eq('user_id', user.id)
-    .maybeSingle()
+  const [{ data: subscription, error }, usage] = await Promise.all([
+    supabase
+      .from('subscriptions')
+      .select(
+        'plan,status,current_period_end,cancel_at_period_end,paddle_customer_id',
+      )
+      .eq('user_id', user.id)
+      .maybeSingle(),
+    getCloudPublishUsage(supabase),
+  ])
 
   if (error) throw error
-
-  const paidPlan = paidPlanFromSubscription(
-    subscription
-      ? {
-          plan: subscription.plan,
-          status: subscription.status,
-          currentPeriodEnd: subscription.current_period_end,
-        }
-      : null,
-  )
 
   const environment = getPaddleEnvironment()
 
@@ -44,8 +37,8 @@ export default async function BillingPage() {
           <h1>Billing</h1>
           <p>
             Paddle handles checkout, invoices, payment methods, and subscription
-            management. ButtonPost stores only the entitlement state needed to
-            decide which product features your account may use.
+            management. ButtonPost stores only the entitlement and usage state
+            needed to decide which product features your account may use.
           </p>
         </div>
 
@@ -64,12 +57,15 @@ export default async function BillingPage() {
       </header>
 
       <BillingPanel
-        plan={paidPlan ?? 'free'}
+        plan={usage.plan}
         subscriptionStatus={subscription?.status ?? null}
         currentPeriodEnd={subscription?.current_period_end ?? null}
         cancelAtPeriodEnd={subscription?.cancel_at_period_end ?? false}
         portalAvailable={Boolean(subscription?.paddle_customer_id)}
         environment={environment}
+        usageUsed={usage.used}
+        usageMonthlyLimit={usage.monthlyLimit}
+        usageResetAt={usage.resetAt}
       />
     </main>
   )
