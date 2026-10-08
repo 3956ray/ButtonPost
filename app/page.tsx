@@ -119,9 +119,14 @@ export default async function HomePage() {
 
       <footer className="footer">
         <span>MVP 0.9 · X + DEV + 小红书 + 即刻 + 登链社区</span>
-        <a href="https://github.com/3956ray/ButtonPost" target="_blank" rel="noreferrer">
-          GitHub
-        </a>
+        <div className="footer-links">
+          <a href="/privacy">Privacy</a>
+          <a href="/terms">Terms</a>
+          <a href="/refund">Billing & refunds</a>
+          <a href="https://github.com/3956ray/ButtonPost" target="_blank" rel="noreferrer">
+            GitHub
+          </a>
+        </div>
       </footer>
     </main>
   )
