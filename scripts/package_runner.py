@@ -34,10 +34,24 @@ def package(target: str) -> Path:
     with tempfile.TemporaryDirectory(prefix="buttonpost-package-") as tmp:
         app = Path(tmp) / "ButtonPost-Runner"
         (app / "runtime").mkdir(parents=True)
+        def safe_ignore(folder: str, names: list[str]) -> set[str]:
+            ignored = set(
+                shutil.ignore_patterns("*.test.mjs", ".DS_Store", "package-lock.json")(folder, names)
+            )
+            for name in names:
+                entry = Path(folder) / name
+                # npm may create self-referential workspace links/junctions,
+                # particularly node_modules/buttonpost on Windows.
+                if entry.is_symlink() or entry.is_junction():
+                    ignored.add(name)
+                if Path(folder).name == "node_modules" and name in {"buttonpost", ".bin"}:
+                    ignored.add(name)
+            return ignored
+
         shutil.copytree(
             source,
             app / "runner",
-            ignore=shutil.ignore_patterns("*.test.mjs", ".DS_Store", "package-lock.json"),
+            ignore=safe_ignore,
         )
         node_binary = app / "runtime" / ("node.exe" if target.startswith("windows") else "node")
         shutil.copy2(node_path, node_binary)
