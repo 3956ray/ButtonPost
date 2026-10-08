@@ -1,0 +1,38 @@
+name: Design QA · responsive
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'components/**'
+      - 'scripts/design-qa.mjs'
+      - '.github/workflows/design-qa.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install headless Chromium for Patchright
+        run: npx patchright install chromium
+      - name: Production build
+        run: npm run build
+      - name: Responsive / onboarding browser smoke
+        run: node scripts/design-qa.mjs
+      - name: Save desktop and mobile screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: buttonpost-editorial-screenshots
+          path: design-qa-artifacts/
+          if-no-files-found: warn
