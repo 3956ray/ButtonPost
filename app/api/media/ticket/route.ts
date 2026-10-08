@@ -1,5 +1,9 @@
 import { canUseCloudPublishing } from '@/lib/billing/entitlement'
 import { createMediaUploadTicket } from '@/lib/security/media-ticket'
+import {
+  consumeRateLimit,
+  rateLimitResponse,
+} from '@/lib/security/rate-limit'
 import { createClient } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
@@ -15,11 +19,21 @@ export async function POST() {
   }
 
   try {
+    const rateLimit = await consumeRateLimit(supabase, 'media_ticket')
+    if (!rateLimit.allowed) return rateLimitResponse(rateLimit)
+  } catch {
+    return Response.json(
+      { error: 'Could not verify media upload rate limit.' },
+      { status: 503 },
+    )
+  }
+
+  try {
     const allowed = await canUseCloudPublishing(supabase, user.id)
     if (!allowed) {
       return Response.json(
         {
-          error: 'ButtonPost Pro is required for cloud media uploads.',
+          error: 'A paid ButtonPost plan is required for cloud media uploads.',
           code: 'subscription_required',
         },
         { status: 402 },

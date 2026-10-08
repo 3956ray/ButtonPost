@@ -1,4 +1,8 @@
 import { deleteConnection, saveConnection } from '@/lib/connections/store'
+import {
+  consumeRateLimit,
+  rateLimitResponse,
+} from '@/lib/security/rate-limit'
 import { createClient } from '@/lib/supabase/server'
 
 type DevUser = {
@@ -14,6 +18,16 @@ export async function POST(request: Request) {
 
   if (!user) {
     return Response.json({ error: 'Sign in is required.' }, { status: 401 })
+  }
+
+  try {
+    const rateLimit = await consumeRateLimit(supabase, 'dev_connect')
+    if (!rateLimit.allowed) return rateLimitResponse(rateLimit)
+  } catch {
+    return Response.json(
+      { error: 'Could not verify DEV connection rate limit.' },
+      { status: 503 },
+    )
   }
 
   let body: { apiKey?: unknown }

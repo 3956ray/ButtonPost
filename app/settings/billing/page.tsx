@@ -56,6 +56,9 @@ export default async function BillingPage() {
           <Link className="auth-link" href="/settings/connections">
             Connections
           </Link>
+          <Link className="auth-link" href="/settings/account">
+            Account
+          </Link>
           <span className="auth-chip">{user.email}</span>
         </div>
       </header>

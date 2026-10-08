@@ -2,6 +2,10 @@ import { canUseCloudPublishing } from '@/lib/billing/entitlement'
 import { loadCredential } from '@/lib/connections/store'
 import { publishEverywhere } from '@/lib/publishers/publish-everywhere'
 import {
+  consumeRateLimit,
+  rateLimitResponse,
+} from '@/lib/security/rate-limit'
+import {
   PLATFORM_IDS,
   type PlatformCredentialMap,
   type PlatformId,
@@ -58,11 +62,21 @@ export async function POST(request: Request) {
   }
 
   try {
+    const rateLimit = await consumeRateLimit(supabase, 'publish')
+    if (!rateLimit.allowed) return rateLimitResponse(rateLimit)
+  } catch {
+    return Response.json(
+      { error: 'Could not verify publish rate limit.' },
+      { status: 503 },
+    )
+  }
+
+  try {
     const allowed = await canUseCloudPublishing(supabase, user.id)
     if (!allowed) {
       return Response.json(
         {
-          error: 'ButtonPost Pro is required for cloud publishing.',
+          error: 'A paid ButtonPost plan is required for cloud publishing.',
           code: 'subscription_required',
         },
         { status: 402 },
