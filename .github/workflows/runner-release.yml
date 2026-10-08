@@ -35,7 +35,7 @@ jobs:
       - name: Install portable runner dependencies only
         run: npm install --prefix runner --omit=dev --no-audit --no-fund
       - name: Verify local runner dependencies
-        run: node --test runner/token.test.mjs runner/lib.test.mjs
+        run: node --test runner/token.test.mjs runner/server.test.mjs runner/lib.test.mjs
       - name: Package runner with Node runtime
         run: python scripts/package_runner.py --target ${{ matrix.target }}
       - uses: actions/upload-artifact@v4
