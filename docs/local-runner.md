@@ -7,7 +7,7 @@ ButtonPost uses a local runner for destinations that need browser automation, QR
 API publishers such as X and DEV can run on the ButtonPost server. Browser-driven platforms should not require uploading long-lived browser cookies to Vercel.
 
 ```text
-https://buttonpost.vercel.app
+https://buttonpost.app
             |
             | browser request
             v
@@ -21,13 +21,11 @@ Modern browsers gate local/loopback access behind local-network permissions. The
 
 ## Pairing
 
-Run:
+For users, install an optional [portable Mac/Windows Runner](runner-install.md) from a tested GitHub `runner-v*` release. On first start, the launcher opens ButtonPost with a fragment-only private pairing link. The browser removes the fragment immediately and stores the local token for subsequent visits.
 
-```bash
-npm run runner
-```
+For developers: `npm run runner` still works. The terminal prints a private token which can be entered in *Manual pairing*. The token persists in the user's local `~/.buttonpost/runner-token` file across restarts.
 
-The terminal prints a runner token. Paste that token into the Local Runner panel. ButtonPost verifies it with `POST /v1/echo`.
+ButtonPost verifies the paired runner with `POST /v1/echo`.
 
 The token is stored in browser local storage and is never sent to ButtonPost's Vercel API.
 

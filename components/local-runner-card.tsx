@@ -62,6 +62,7 @@ async function localRequest(
 export function LocalRunnerCard() {
   const [runnerUrl, setRunnerUrl] = useState(DEFAULT_RUNNER_URL)
   const [runnerToken, setRunnerToken] = useState('')
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const [state, setState] = useState<RunnerState>('idle')
   const [message, setMessage] = useState('Not connected')
   const [version, setVersion] = useState('')
@@ -78,6 +79,21 @@ export function LocalRunnerCard() {
     if (savedUrl) setRunnerUrl(savedUrl)
     if (savedToken) setRunnerToken(savedToken)
     if (savedXhsAccount) setXhsAccount(savedXhsAccount)
+
+    // The desktop launcher uses a URL fragment: it is not sent to the server.
+    // Erase the secret from browser history before any asynchronous work.
+    const match = /^#buttonpost-runner=([A-Za-z0-9_-]{32,})$/.exec(window.location.hash)
+    const autoToken = match?.[1]
+    if (autoToken) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search)
+      window.localStorage.setItem(STORAGE_URL, DEFAULT_RUNNER_URL)
+      window.localStorage.setItem(STORAGE_TOKEN, autoToken)
+      setRunnerUrl(DEFAULT_RUNNER_URL)
+      setRunnerToken(autoToken)
+    }
+    const activeUrl = autoToken ? DEFAULT_RUNNER_URL : savedUrl
+    const activeToken = autoToken || savedToken
+    if (activeUrl && activeToken) void connectRunner(activeUrl, activeToken, savedXhsAccount || 'default')
   }, [])
 
   async function checkXiaohongshu(
@@ -122,14 +138,18 @@ export function LocalRunnerCard() {
     }
   }
 
-  async function connectRunner() {
+  async function connectRunner(
+    requestedUrl = runnerUrl,
+    requestedToken = runnerToken,
+    requestedAccount = xhsAccount,
+  ) {
     setState('checking')
     setMessage('Checking local runner...')
     setVersion('')
     setCapabilities([])
 
-    const url = runnerUrl.trim().replace(/\/$/, '')
-    const token = runnerToken.trim()
+    const url = requestedUrl.trim().replace(/\/$/, '')
+    const token = requestedToken.trim()
 
     if (!url || !token) {
       setState('error')
@@ -173,7 +193,9 @@ export function LocalRunnerCard() {
       )
       setState('connected')
       setMessage('Connected. Local browser publishers are available.')
-      void checkXiaohongshu(url, token, xhsAccount)
+      void checkXiaohongshu(url, token, requestedAccount).finally(() => {
+        window.dispatchEvent(new Event('buttonpost:local-readiness-refresh'))
+      })
     } catch {
       setState('error')
       setMessage(
@@ -224,6 +246,8 @@ export function LocalRunnerCard() {
       setXhsMessage(
         'The Local Runner lost the Xiaohongshu login request. Check the runner terminal for details.',
       )
+    } finally {
+      window.dispatchEvent(new Event('buttonpost:local-readiness-refresh'))
     }
   }
 
@@ -238,6 +262,7 @@ export function LocalRunnerCard() {
     setMessage('Not connected')
     setXhsState('unknown')
     setXhsMessage('Connect the runner, then check your Xiaohongshu login.')
+    window.dispatchEvent(new Event('buttonpost:local-readiness-refresh'))
   }
 
   const stateLabel =
@@ -263,13 +288,13 @@ export function LocalRunnerCard() {
   const xhsBusy = xhsState === 'login' || xhsState === 'checking'
 
   return (
-    <section className="runner-card">
+    <section className="runner-card" id="local-runner-setup">
       <div className="runner-heading">
         <div>
           <span className="eyebrow">MVP</span>
-          <h2>Local Runner</h2>
+          <h2>Optional Local Runner</h2>
           <p>
-            Connect ButtonPost to this computer for platforms that need your browser session, local media, or QR login.
+            X and DEV work entirely online. Only install this helper if you want to publish to browser-based platforms such as Xiaohongshu, Jike or LearnBlockchain.
           </p>
         </div>
         <span className={'runner-state ' + state}>
@@ -278,7 +303,15 @@ export function LocalRunnerCard() {
         </span>
       </div>
 
-      <div className="runner-fields">
+      <div className="runner-actions">
+        <a className="connection-primary" href="https://github.com/3956ray/ButtonPost/blob/main/docs/runner-install.md" target="_blank" rel="noreferrer">
+          How to install the optional helper ↗
+        </a>
+        <button type="button" className="secondary-button" onClick={() => setShowAdvanced(value => !value)}>
+          {showAdvanced ? 'Hide manual pairing' : 'Manual pairing / developer setup'}
+        </button>
+      </div>
+      {showAdvanced ? <div className="runner-fields">
         <label>
           <span>Runner URL</span>
           <input
@@ -298,23 +331,29 @@ export function LocalRunnerCard() {
             autoComplete="off"
           />
         </label>
-      </div>
+      </div> : null}
 
-      <div className="runner-actions">
-        <button type="button" onClick={connectRunner} disabled={state === 'checking'}>
+      {showAdvanced ? <div className="runner-actions">
+        <button type="button" onClick={() => void connectRunner()} disabled={state === 'checking'}>
           {state === 'checking' ? 'Connecting...' : 'Connect runner'}
         </button>
         <button type="button" className="secondary-button" onClick={forgetRunner}>
           Forget
         </button>
         <code>npm run runner</code>
-      </div>
+      </div> : null}
 
       <p className={'runner-message ' + (state === 'error' ? 'error' : '')}>{message}</p>
+      {state === 'error' && !showAdvanced ? (
+        <button type="button" className="secondary-button" onClick={() => setShowAdvanced(true)}>
+          Open manual pairing
+        </button>
+      ) : null}
       <p className="runner-privacy">
         The runner token stays in this browser local storage and is sent only to <code>127.0.0.1</code>, not to the ButtonPost server.
       </p>
 
+      {state === 'connected' ? (<>
       <div className="local-platform-card">
         <div className="local-platform-header">
           <div>
@@ -380,6 +419,7 @@ export function LocalRunnerCard() {
         runnerSupported={capabilities.includes('learnblockchain:auth')}
         runnerVersion={version}
       />
+      </>) : null}
 
     </section>
   )

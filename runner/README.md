@@ -34,7 +34,7 @@ The runner listens on:
 http://127.0.0.1:27123
 ```
 
-It prints a one-time token when it starts. Paste that token into the **Local Runner** panel in ButtonPost and click **Connect runner**.
+The terminal prints a persistent local token kept under `~/.buttonpost/runner-token`. Paste it into ButtonPost under **Manual pairing / developer setup**, only if you did not use the portable launcher. The portable launcher (`node runner/launch.mjs`) opens a fragment-only pairing link on first start; ButtonPost clears that fragment immediately. See [Install instructions](../docs/runner-install.md).
 
 The token is stored in your browser's local storage. It is not sent to the ButtonPost Vercel backend.
 
@@ -43,8 +43,8 @@ The token is stored in your browser's local storage. It is not sent to the Butto
 ```bash
 BUTTONPOST_RUNNER_HOST=127.0.0.1
 BUTTONPOST_RUNNER_PORT=27123
-BUTTONPOST_RUNNER_TOKEN=choose-a-stable-local-token
-BUTTONPOST_ALLOWED_ORIGINS=https://buttonpost.vercel.app,http://localhost:3000
+BUTTONPOST_RUNNER_TOKEN=replace-with-a-random-32-plus-character-token
+BUTTONPOST_ALLOWED_ORIGINS=https://buttonpost.app,https://www.buttonpost.app,https://buttonpost.vercel.app,http://localhost:3000
 # Optional. Default is false so publishing is visible.
 BUTTONPOST_XHS_HEADLESS=false
 # GitHub OAuth for LearnBlockchain can require multi-page/mobile verification.

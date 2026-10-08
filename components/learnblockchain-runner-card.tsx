@@ -132,6 +132,8 @@ export function LearnBlockchainRunnerCard({
       setMessage(
         'Could not ask the Local Runner for LearnBlockchain status.',
       )
+    } finally {
+      window.dispatchEvent(new Event('buttonpost:local-readiness-refresh'))
     }
   }
 
@@ -191,6 +193,8 @@ export function LearnBlockchainRunnerCard({
       setMessage(
         'The Local Runner lost the LearnBlockchain login request. Check the runner terminal for details.',
       )
+    } finally {
+      window.dispatchEvent(new Event('buttonpost:local-readiness-refresh'))
     }
   }
 

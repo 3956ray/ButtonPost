@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto'
+import { loadOrCreateRunnerToken } from './token.mjs'
 import { createServer } from 'node:http'
 import { corsHeaders, isAuthorized, isOriginAllowed, parseAllowedOrigins } from './lib.mjs'
 import {
@@ -27,10 +27,10 @@ import {
 const VERSION = '0.8.1'
 const host = process.env.BUTTONPOST_RUNNER_HOST || '127.0.0.1'
 const port = Number(process.env.BUTTONPOST_RUNNER_PORT || '27123')
-const token = process.env.BUTTONPOST_RUNNER_TOKEN || randomBytes(24).toString('base64url')
+const { token } = await loadOrCreateRunnerToken()
 const allowedOrigins = parseAllowedOrigins(
   process.env.BUTTONPOST_ALLOWED_ORIGINS ||
-    'https://buttonpost.vercel.app,http://localhost:3000',
+    'https://buttonpost.app,https://www.buttonpost.app,https://buttonpost.vercel.app,http://localhost:3000',
 )
 
 function sendJson(res, status, body, headers = {}) {
@@ -336,11 +336,11 @@ server.listen(port, host, () => {
   console.log('ButtonPost Local Runner')
   console.log('  Version: ' + VERSION)
   console.log('  URL:     http://' + host + ':' + port)
-  console.log('  Token:   ' + token)
+  console.log('  Token:   ' + token + ' (private; never share)')
   console.log('  Allowed origins: ' + [...allowedOrigins].join(', '))
   console.log('  Capabilities: Xiaohongshu auth + image-note publishing; Jike auth + review publishing; LearnBlockchain auth + article review publishing; Indie Hackers auth + review publishing')
   console.log('')
-  console.log('Keep this terminal open while ButtonPost uses local browser publishers.')
+  console.log('Keep this window open only while using local browser publishers.')
   console.log('The token stays on your machine; paste it into ButtonPost only when pairing.')
   console.log('')
 })
