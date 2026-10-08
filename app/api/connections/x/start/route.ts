@@ -40,9 +40,9 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return NextResponse.redirect(
-      new URL('/login', canonical ?? requestUrl),
-    )
+    const loginUrl = new URL('/login', canonical ?? requestUrl)
+    loginUrl.searchParams.set('next', '/api/connections/x/start')
+    return NextResponse.redirect(loginUrl)
   }
 
   try {
