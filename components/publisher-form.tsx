@@ -9,6 +9,7 @@ import {
   parsePublicationHistory,
   prependHistoryEntry,
   updateHistoryResults,
+  getFailedHistoryPlatforms,
   type PublicationHistoryEntry,
   type PublicationHistoryResult,
 } from '@/lib/publication-history'
@@ -106,6 +107,8 @@ export function PublisherForm({
   const historyRef = useRef<PublicationHistoryEntry[]>([])
   const [imageInputKey, setImageInputKey] = useState(0)
   const [localReady, setLocalReady] = useState<Record<string, boolean>>({})
+  const [retryNotice, setRetryNotice] = useState('')
+  const latestFiles = useRef<{ id: string; files: File[] } | null>(null)
 
   useEffect(() => {
     const loaded = parsePublicationHistory(
@@ -230,6 +233,31 @@ export function PublisherForm({
       entry.imageNames.length
         ? 'Text and destinations were restored. Browsers cannot restore local image files from history, so reselect the images before publishing again.'
         : '',
+    )
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // Explicit review before retry: remote timeouts can disguise a successful post.
+  function retryFailed(entry: PublicationHistoryEntry) {
+    const failed = getFailedHistoryPlatforms(entry)
+    const available = failed.filter(platform => {
+      if (ACTIVE_DESTINATION_SET.has(platform)) return localReady[platform] === true
+      return connectedPlatforms.includes(platform as PlatformId)
+    })
+    const retained = latestFiles.current?.id === entry.id ? latestFiles.current.files : []
+    const originalImagesMatch = retained.length === entry.imageNames.length &&
+      entry.imageNames.every((name, index) => retained[index]?.name === name)
+
+    setTitle(entry.title)
+    setContent(entry.content)
+    setSelected(available as DestinationId[])
+    setImages(originalImagesMatch ? [...retained] : [])
+    setImageInputKey(key => key + 1)
+    setResults([])
+    setRetryNotice(
+      'Only failed destinations are selected. Verify whether a timed-out post actually went live before publishing again.' +
+      (available.length < failed.length ? ' Reconnect unavailable destinations first.' : '') +
+      (!originalImagesMatch && entry.imageNames.length > 0 ? ' Reattach original images before retrying.' : ''),
     )
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -674,11 +702,13 @@ export function PublisherForm({
     setError('')
     setResults([])
     setMediaProgress('')
+    setRetryNotice('')
 
     const historyId =
       globalThis.crypto?.randomUUID?.() ||
       `${Date.now()}-${Math.random().toString(36).slice(2)}`
 
+    latestFiles.current = { id: historyId, files: [...images] }
     addHistoryEntry({
       id: historyId,
       createdAt: new Date().toISOString(),
@@ -958,7 +988,8 @@ export function PublisherForm({
         </button>
       </aside>
 
-      {error ? <div className="error-banner">{error}</div> : null}
+      {retryNotice ? <p className="selection-warning" role="status">{retryNotice}</p> : null}
+       {error ? <div className="error-banner">{error}</div> : null}
 
       {results.length > 0 ? (
         <section className="results" aria-live="polite">
@@ -987,6 +1018,7 @@ export function PublisherForm({
       <PublicationHistory
         entries={history}
         onReuse={reuseHistoryEntry}
+        onRetryFailed={retryFailed}
         onClear={clearHistory}
       />
     </>
