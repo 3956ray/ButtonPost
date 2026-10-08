@@ -74,6 +74,15 @@ export function LocalRunnerCard() {
   const [xhsMessage, setXhsMessage] = useState('Connect the runner, then check your Xiaohongshu login.')
 
   useEffect(() => {
+    const openFromAnchor = () => {
+      if (window.location.hash === '#local-runner-setup') setExpanded(true)
+    }
+    window.addEventListener('hashchange', openFromAnchor)
+    openFromAnchor()
+    return () => window.removeEventListener('hashchange', openFromAnchor)
+  }, [])
+
+  useEffect(() => {
     const savedUrl = window.localStorage.getItem(STORAGE_URL)
     const savedToken = window.localStorage.getItem(STORAGE_TOKEN)
     const savedXhsAccount = window.localStorage.getItem(STORAGE_XHS_ACCOUNT)
