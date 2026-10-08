@@ -128,6 +128,8 @@ export function JikeRunnerCard({
     } catch {
       setState('error')
       setMessage('Could not ask the Local Runner for Jike status.')
+    } finally {
+      window.dispatchEvent(new Event('buttonpost:local-readiness-refresh'))
     }
   }
 
@@ -183,6 +185,8 @@ export function JikeRunnerCard({
       setMessage(
         'The Local Runner lost the Jike login request. Check the runner terminal for details.',
       )
+    } finally {
+      window.dispatchEvent(new Event('buttonpost:local-readiness-refresh'))
     }
   }
 
