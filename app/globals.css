@@ -49,6 +49,36 @@ button, input, textarea { font: inherit; }
   letter-spacing: -.055em;
 }
 .hero p { max-width: 640px; margin: 20px 0 0; color: var(--muted); font-size: 17px; line-height: 1.55; }
+.hero-onboarding {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  margin-top: 22px;
+}
+.hero-onboarding-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 12px;
+  background: var(--text);
+  color: white;
+  font-size: 13px;
+  font-weight: 760;
+  letter-spacing: -.005em;
+  text-decoration: none;
+  transition: transform .16s ease, background .16s ease;
+}
+.hero-onboarding-primary:hover { transform: translateY(-1px); background: var(--accent); }
+.hero-onboarding-primary:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.hero-onboarding > span { color: var(--muted); font-size: 12px; line-height: 1.5; }
+@media (prefers-reduced-motion: reduce) {
+  .hero-onboarding-primary { transition: none; }
+  .hero-onboarding-primary:hover { transform: none; }
+}
+
 
 .composer {
   display: grid;
