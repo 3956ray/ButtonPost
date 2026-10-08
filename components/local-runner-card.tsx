@@ -353,6 +353,7 @@ export function LocalRunnerCard() {
         The runner token stays in this browser local storage and is sent only to <code>127.0.0.1</code>, not to the ButtonPost server.
       </p>
 
+      {state === 'connected' ? (<>
       <div className="local-platform-card">
         <div className="local-platform-header">
           <div>
@@ -418,6 +419,7 @@ export function LocalRunnerCard() {
         runnerSupported={capabilities.includes('learnblockchain:auth')}
         runnerVersion={version}
       />
+      </>) : null}
 
     </section>
   )
