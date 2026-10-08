@@ -46,11 +46,11 @@ export default async function ConnectionsPage({ searchParams }: Props) {
       <header className="settings-header">
         <div>
           <Link className="auth-home" href="/">← ButtonPost</Link>
-          <span className="eyebrow">Settings</span>
-          <h1>Connections</h1>
+          <span className="eyebrow">YOUR WORKSPACE / STEP 02</span>
+          <h1>Connect your channels<span className="brand-accent">.</span></h1>
           <p>
-            Connect the accounts ButtonPost is allowed to publish to. Credentials
-            are scoped to your ButtonPost user and encrypted at rest.
+            Choose where your ideas travel. Connect X with one authorization or
+            add your DEV Community API key. Your credentials remain encrypted.
           </p>
         </div>
         <div className="settings-header-actions">
@@ -72,6 +72,14 @@ export default async function ConnectionsPage({ searchParams }: Props) {
         }))}
         notice={noticeFor(params)}
       />
+      <div className="settings-finish">
+        <div>
+          <span className="eyebrow">NEXT / YOUR FIRST POST</span>
+          <strong>Ready to share something?</strong>
+          <p>Return to the publishing desk whenever you’re ready.</p>
+        </div>
+        <Link href="/" className="settings-finish-link">Go to publishing desk <span aria-hidden="true">↗</span></Link>
+      </div>
     </main>
   )
 }
