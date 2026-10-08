@@ -77,6 +77,15 @@ export default function TermsPage() {
         </p>
       </LegalSection>
 
+      <LegalSection title="Support">
+        <p>
+          Private-beta support is available at{' '}
+          <a href="mailto:support@buttonpost.app">support@buttonpost.app</a>.
+          Do not send passwords, API keys, payment card information, or platform
+          credentials through support email.
+        </p>
+      </LegalSection>
+
       <LegalSection title="Liability">
         <p>
           To the extent permitted by applicable law, ButtonPost is provided on

@@ -123,6 +123,7 @@ export default async function HomePage() {
           <a href="/privacy">Privacy</a>
           <a href="/terms">Terms</a>
           <a href="/refund">Billing & refunds</a>
+          <a href="mailto:support@buttonpost.app">Support</a>
           <a href="https://github.com/3956ray/ButtonPost" target="_blank" rel="noreferrer">
             GitHub
           </a>

@@ -18,9 +18,9 @@ export default function RefundPage() {
       <LegalSection title="When live billing is enabled">
         <p>
           Before ButtonPost enables Paddle Live, this page will be updated with
-          the final private support contact and any discretionary refund window.
-          Live prices and renewal periods will be shown before purchase in Paddle
-          Checkout.
+          the final discretionary refund window. Live prices and renewal periods
+          will be shown before purchase in Paddle Checkout. Billing support is
+          available at support@buttonpost.app.
         </p>
       </LegalSection>
 
@@ -38,7 +38,7 @@ export default function RefundPage() {
           refund window because live billing has not launched. Any refund rights
           required by applicable law remain unaffected. Duplicate charges,
           unauthorized charges, or technical billing errors should be raised
-          promptly once the private support channel is published.
+          promptly at support@buttonpost.app.
         </p>
       </LegalSection>
 
