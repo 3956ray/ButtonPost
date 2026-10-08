@@ -65,7 +65,7 @@ export default async function LoginPage({ searchParams }: Props) {
         <div className="auth-side-visual" aria-hidden="true">
           <div className="auth-side-post"><span>ONE ORIGINAL POST</span><strong>Your idea, in your own words.</strong></div>
           <div className="auth-side-connector"><i /><i /><i /></div>
-          <div className="auth-side-destinations"><span>𝕏</span><span>D</span><span>小</span><span>即</span><span>链</span></div>
+          <div className="auth-side-destinations"><span>𝕏</span><span>D</span><span>XH</span><span>JK</span><span>LB</span></div>
         </div>
         <strong>Good ideas are meant to travel.</strong>
         <p>Write once. Publish everywhere.</p>
