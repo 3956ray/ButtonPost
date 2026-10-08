@@ -2,7 +2,8 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { BillingPanel } from '@/components/billing-panel'
 import { getCloudPublishUsage } from '@/lib/billing/usage'
-import { getPaddleEnvironment } from '@/lib/paddle/server'
+import { resolvePaddleEnvironment } from '@/lib/paddle/runtime'
+import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 
 export default async function BillingPage() {
@@ -13,6 +14,11 @@ export default async function BillingPage() {
 
   if (!user) redirect('/login?next=/settings/billing')
 
+  const requestHeaders = await headers()
+  const environment = resolvePaddleEnvironment(
+    requestHeaders.get('host'),
+  )
+
   const [{ data: subscription, error }, usage] = await Promise.all([
     supabase
       .from('subscriptions')
@@ -20,13 +26,13 @@ export default async function BillingPage() {
         'plan,status,current_period_end,cancel_at_period_end,paddle_customer_id',
       )
       .eq('user_id', user.id)
+      .eq('environment', environment)
       .maybeSingle(),
-    getCloudPublishUsage(supabase),
+    getCloudPublishUsage(user.id, environment),
   ])
 
   if (error) throw error
 
-  const environment = getPaddleEnvironment()
 
   return (
     <main className="settings-shell">

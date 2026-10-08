@@ -86,11 +86,10 @@ export async function DELETE(request: Request) {
     )
   }
 
-  const { data: subscription, error: subscriptionError } = await supabase
+  const { data: subscriptions, error: subscriptionError } = await supabase
     .from('subscriptions')
-    .select('paddle_subscription_id,status')
+    .select('paddle_subscription_id,status,environment')
     .eq('user_id', user.id)
-    .maybeSingle()
 
   if (subscriptionError) {
     return Response.json(
@@ -99,19 +98,34 @@ export async function DELETE(request: Request) {
     )
   }
 
-  if (
-    subscription?.paddle_subscription_id &&
-    subscription.status !== 'canceled'
-  ) {
+  for (const subscription of subscriptions ?? []) {
+    if (
+      !subscription.paddle_subscription_id ||
+      subscription.status === 'canceled'
+    ) {
+      continue
+    }
+
+    if (
+      subscription.environment !== 'sandbox' &&
+      subscription.environment !== 'production'
+    ) {
+      return Response.json(
+        { error: 'Stored Paddle environment is invalid.' },
+        { status: 500 },
+      )
+    }
+
     try {
       await cancelPaddleSubscriptionImmediately(
         subscription.paddle_subscription_id,
+        subscription.environment,
       )
     } catch {
       return Response.json(
         {
           error:
-            'Could not cancel the Paddle subscription. The account was not deleted.',
+            'Could not cancel every Paddle subscription. The account was not deleted.',
         },
         { status: 502 },
       )
