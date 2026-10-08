@@ -210,6 +210,7 @@ export async function POST(request: Request) {
     if (
       event.eventType === 'subscription.created' ||
       event.eventType === 'subscription.updated' ||
+      event.eventType === 'subscription.past_due' ||
       event.eventType === 'subscription.canceled' ||
       event.eventType === 'subscription.activated' ||
       event.eventType === 'subscription.trialing' ||
