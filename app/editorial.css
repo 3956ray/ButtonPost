@@ -712,3 +712,10 @@ button:active:not(:disabled) { transform: translateY(0); }
 .local-setup-link:hover { border-color: #8fa089; color: #26452e; background: #e8eee4; }
 .local-setup-link span { font-size: 16px; font-weight: 500; }
 #local-runner-setup { scroll-margin-top: 22px; }
+
+
+/* Latin fallback monograms keep decorative visuals stable across system fonts. */
+.distribution-channel > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.distribution-channel b { font-size: 10px; letter-spacing: -.025em; }
+.platform-glyph.glyph-xhs, .platform-glyph.glyph-jike, .platform-glyph.glyph-lbc { font-size: 11px; letter-spacing: -.025em; }
+.auth-side-destinations span { font-size: 12px; letter-spacing: -.03em; }
