@@ -164,12 +164,16 @@ button:active:not(:disabled) { transform: translateY(0); }
 .hero-trustline-dots i { width: 7px; height: 7px; margin-right: -1px; border: 1px solid var(--bg); border-radius: 50%; background: var(--accent); }
 .hero-trustline-dots i:nth-child(2) { background: #9dab92; }
 .hero-trustline-dots i:nth-child(3) { background: #e7bd78; }
-.hero--workspace { grid-template-columns: 1fr; padding: 54px 0 54px; }
-.hero--workspace h1 { font-size: clamp(44px, 5.25vw, 69px); }
-.hero--workspace p { max-width: 580px; }
+.hero--workspace { grid-template-columns: 1fr; padding: 36px 0 40px; }
+.hero--workspace h1 {
+  display: flex; flex-wrap: wrap; gap: .22em;
+  font-size: clamp(43px, 4.35vw, 61px);
+  line-height: 1.06; margin-top: 15px;
+}
+.hero--workspace h1 > span { display: inline; }
+.hero--workspace p { max-width: 620px; margin-top: 15px; }
 .hero--workspace .hero-onboarding { margin-top: 19px; }
 .hero--workspace .hero-kicker { font-size: 10px; }
-.hero--workspace h1 { margin-top: 16px; }
 
 /* Purpose-built CSS illustration: one original post becomes many destinations */
 .distribution-art {
