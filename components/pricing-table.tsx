@@ -1,6 +1,9 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  PLAN_ENTITLEMENTS,
+} from '@/lib/billing/plans'
 import type { Tier } from '@/lib/billing/tiers'
 import {
   createPaddleClient,
@@ -169,6 +172,8 @@ export function PricingTable({
     }
   }
 
+  const free = PLAN_ENTITLEMENTS.free
+
   return (
     <>
       <div className="pricing-toolbar">
@@ -199,6 +204,18 @@ export function PricingTable({
             : 'Localized by Paddle from your IP'}
         </span>
       </div>
+
+      <aside className="pricing-free-note">
+        <div>
+          <span className="eyebrow">Free forever</span>
+          <strong>
+            {free.cloudPublishBatchesPerMonth} cloud publish batches / month
+          </strong>
+        </div>
+        <span>
+          Unlimited Local Runner publishing · no card required
+        </span>
+      </aside>
 
       {error ? <p className="pricing-error">{error}</p> : null}
 
@@ -252,7 +269,9 @@ export function PricingTable({
       </div>
 
       <p className="pricing-footnote">
-        Prices shown above are the localized totals returned by Paddle for the
+        A cloud publish batch is one ButtonPost server publish action. X + DEV
+        together still counts once. Local Runner destinations never consume
+        cloud quota. Prices shown above are Paddle localized totals for the
         selected billing period.
       </p>
     </>

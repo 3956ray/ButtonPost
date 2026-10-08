@@ -1,5 +1,9 @@
-import { canUseCloudPublishing } from '@/lib/billing/entitlement'
 import { loadCredential } from '@/lib/connections/store'
+import {
+  planEnforcementEnabled,
+  releaseCloudPublish,
+  reserveCloudPublish,
+} from '@/lib/billing/usage'
 import { publishEverywhere } from '@/lib/publishers/publish-everywhere'
 import {
   consumeRateLimit,
@@ -51,6 +55,25 @@ function isPlatformId(value: unknown): value is PlatformId {
   )
 }
 
+function quotaError(
+  used: number,
+  monthlyLimit: number,
+  resetAt: string,
+) {
+  return Response.json(
+    {
+      error:
+        `Monthly cloud publishing limit reached (${used}/${monthlyLimit}). ` +
+        'Local Runner publishing remains unlimited. Upgrade your plan or wait for the monthly reset.',
+      code: 'plan_limit_reached',
+      used,
+      monthlyLimit,
+      resetAt,
+    },
+    { status: 402 },
+  )
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient()
   const {
@@ -67,24 +90,6 @@ export async function POST(request: Request) {
   } catch {
     return Response.json(
       { error: 'Could not verify publish rate limit.' },
-      { status: 503 },
-    )
-  }
-
-  try {
-    const allowed = await canUseCloudPublishing(supabase, user.id)
-    if (!allowed) {
-      return Response.json(
-        {
-          error: 'A paid ButtonPost plan is required for cloud publishing.',
-          code: 'subscription_required',
-        },
-        { status: 402 },
-      )
-    }
-  } catch {
-    return Response.json(
-      { error: 'Could not verify ButtonPost subscription status.' },
       { status: 503 },
     )
   }
@@ -135,26 +140,84 @@ export async function POST(request: Request) {
     )
   }
 
-  const credentials: PlatformCredentialMap = {}
-
-  for (const platform of [...new Set(body.platforms)]) {
-    const credential = await loadCredential(
-      supabase,
-      user.id,
-      platform,
+  let reservation
+  try {
+    reservation = await reserveCloudPublish(supabase)
+  } catch {
+    return Response.json(
+      { error: 'Could not verify ButtonPost cloud publishing allowance.' },
+      { status: 503 },
     )
-    if (credential) credentials[platform] = credential
   }
 
-  const results = await publishEverywhere(
-    {
-      title: body.title.trim(),
-      content: body.content,
-      media,
-    },
-    body.platforms,
-    credentials,
-  )
+  if (!reservation.allowed && planEnforcementEnabled()) {
+    return quotaError(
+      reservation.used,
+      reservation.monthlyLimit,
+      reservation.resetAt,
+    )
+  }
 
-  return Response.json({ results })
+  const credentials: PlatformCredentialMap = {}
+
+  try {
+    for (const platform of [...new Set(body.platforms)]) {
+      const credential = await loadCredential(
+        supabase,
+        user.id,
+        platform,
+      )
+      if (credential) credentials[platform] = credential
+    }
+
+    const results = await publishEverywhere(
+      {
+        title: body.title.trim(),
+        content: body.content,
+        media,
+      },
+      body.platforms,
+      credentials,
+    )
+
+    const counted = results.some(
+      (result) =>
+        result.status === 'published' || result.status === 'draft',
+    )
+
+    if (reservation.usageId && !counted) {
+      try {
+        await releaseCloudPublish(supabase, reservation.usageId)
+      } catch {
+        // Publishing results are more important than a best-effort quota
+        // rollback. A later support review can reconcile an isolated row.
+      }
+    }
+
+    return Response.json({
+      results,
+      usage: {
+        plan: reservation.plan,
+        used:
+          reservation.usageId && !counted
+            ? Math.max(reservation.used - 1, 0)
+            : reservation.used,
+        monthlyLimit: reservation.monthlyLimit,
+        resetAt: reservation.resetAt,
+      },
+    })
+  } catch {
+    if (reservation.usageId) {
+      try {
+        await releaseCloudPublish(supabase, reservation.usageId)
+      } catch {
+        // Best-effort rollback only.
+      }
+    }
+
+    return Response.json(
+      { error: 'ButtonPost could not complete the cloud publish request.' },
+      { status: 500 },
+    )
+  }
 }
