@@ -130,6 +130,7 @@ export default async function HomePage() {
                 </summary>
                 <div className="profile-popover">
                   <span className="profile-email" title={auth.email ?? undefined}>{auth.email ?? 'Signed in'}</span>
+                  <Link href="/settings/connections">Connections <span aria-hidden="true">↗</span></Link>
                   <Link href="/settings/account">Account settings <span aria-hidden="true">↗</span></Link>
                   <Link href="/settings/billing">Billing <span aria-hidden="true">↗</span></Link>
                   <form action="/auth/signout" method="post">
