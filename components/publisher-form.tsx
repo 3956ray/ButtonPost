@@ -97,7 +97,6 @@ export function PublisherForm({
           platform.configured && connectedPlatforms.includes(platform.id),
       )
       .map((platform) => platform.id),
-    ...ACTIVE_LOCAL_DESTINATIONS,
   ])
   const [results, setResults] = useState<DisplayPublishResult[]>([])
   const [error, setError] = useState('')
@@ -106,6 +105,7 @@ export function PublisherForm({
   const [history, setHistory] = useState<PublicationHistoryEntry[]>([])
   const historyRef = useRef<PublicationHistoryEntry[]>([])
   const [imageInputKey, setImageInputKey] = useState(0)
+  const [localReady, setLocalReady] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     const loaded = parsePublicationHistory(
@@ -113,6 +113,64 @@ export function PublisherForm({
     )
     historyRef.current = loaded
     setHistory(loaded)
+  }, [])
+
+  // Local destinations require a paired runner and verified platform authentication.
+  useEffect(() => {
+    let cancelled = false
+    let requestId = 0
+    async function refreshLocalReadiness() {
+      const id = ++requestId
+      const url = window.localStorage.getItem(RUNNER_URL_KEY)
+      const token = window.localStorage.getItem(RUNNER_TOKEN_KEY)
+      const ready: Record<string, boolean> = {}
+      if (url && token) {
+        const headers = { Authorization: 'Bearer ' + token }
+        const base = url.replace(/\\/$/, '')
+        try {
+          const parsed = new URL(base)
+          if (parsed.protocol !== 'http:' || !['127.0.0.1', 'localhost'].includes(parsed.hostname)) {
+            throw new Error('Runner must bind to loopback')
+          }
+          const echo = await fetch(base + '/v1/echo', loopbackInit({
+            method: 'POST',
+            headers: { ...headers, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Readiness check', content: '' }),
+            cache: 'no-store',
+          }))
+          if (!echo.ok) throw new Error('Runner pairing invalid')
+          await Promise.all(ACTIVE_LOCAL_DESTINATIONS.map(async platform => {
+            const key = platform === 'xiaohongshu' ? XHS_ACCOUNT_KEY :
+              platform === 'jike' ? JIKE_ACCOUNT_KEY : LEARNBLOCKCHAIN_ACCOUNT_KEY
+            try {
+              const account = window.localStorage.getItem(key) || 'default'
+              const response = await fetch(base + '/v1/platforms/' + platform +
+                '/status?account=' + encodeURIComponent(account),
+                loopbackInit({ headers, cache: 'no-store' }))
+              const data = await response.json() as { authenticated?: boolean }
+              ready[platform] = response.ok && data.authenticated === true
+            } catch {
+              ready[platform] = false
+            }
+          }))
+        } catch {
+          // Cloud destinations stay usable even if the optional local runner is offline.
+        }
+      }
+      if (!cancelled && id === requestId) {
+        setLocalReady(ready)
+        setSelected(current => current.filter(platform =>
+          !ACTIVE_DESTINATION_SET.has(platform) || ready[platform]))
+      }
+    }
+    const onRefresh = () => { void refreshLocalReadiness() }
+    window.addEventListener('buttonpost:local-readiness-refresh', onRefresh)
+    void refreshLocalReadiness()
+    return () => {
+      cancelled = true
+      requestId += 1
+      window.removeEventListener('buttonpost:local-readiness-refresh', onRefresh)
+    }
   }, [])
 
   const sourceLength = useMemo(() => content.trim().length, [content])
@@ -787,6 +845,7 @@ export function PublisherForm({
 
       <aside className="side-pane">
         <h2 className="section-title">Publish to</h2>
+        <p className="helper">Cloud platforms work entirely in your browser. Local browser platforms require an optional helper installed on your computer.</p>
         <div className="platform-list">
           {platforms.map((platform) => {
             const connected =
@@ -827,14 +886,15 @@ export function PublisherForm({
             <input
               type="checkbox"
               checked={selected.includes('xiaohongshu')}
-              onChange={() => togglePlatform('xiaohongshu')}
+              disabled={!localReady['xiaohongshu']}
+               onChange={() => togglePlatform('xiaohongshu')}
             />
             <span className="platform-copy">
               <span className="platform-name">
                 <span className="dot local" />
                 Xiaohongshu · 小红书
               </span>
-              <span className="platform-note">Local Runner · review before publish</span>
+              <span className="platform-note">{localReady['xiaohongshu'] ? 'Local Runner · review before publish' : 'Needs optional Local Runner + login · see below'}</span>
             </span>
           </label>
 
@@ -842,14 +902,15 @@ export function PublisherForm({
             <input
               type="checkbox"
               checked={selected.includes('jike')}
-              onChange={() => togglePlatform('jike')}
+              disabled={!localReady['jike']}
+               onChange={() => togglePlatform('jike')}
             />
             <span className="platform-copy">
               <span className="platform-name">
                 <span className="dot local" />
                 Jike · 即刻
               </span>
-              <span className="platform-note">Local Runner · review before send</span>
+              <span className="platform-note">{localReady['jike'] ? 'Local Runner · review before send' : 'Needs optional Local Runner + login · see below'}</span>
             </span>
           </label>
 
@@ -857,14 +918,15 @@ export function PublisherForm({
             <input
               type="checkbox"
               checked={selected.includes('learnblockchain')}
-              onChange={() => togglePlatform('learnblockchain')}
+              disabled={!localReady['learnblockchain']}
+               onChange={() => togglePlatform('learnblockchain')}
             />
             <span className="platform-copy">
               <span className="platform-name">
                 <span className="dot local" />
                 LearnBlockchain · 登链社区
               </span>
-              <span className="platform-note">Local Runner · article review before publish</span>
+              <span className="platform-note">{localReady['learnblockchain'] ? 'Local Runner · article review before publish' : 'Needs optional Local Runner + login · see below'}</span>
             </span>
           </label>
 
