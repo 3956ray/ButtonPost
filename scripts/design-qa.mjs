@@ -76,11 +76,6 @@ try {
       `${size.name} headline exceeds viewport`)
     if (measures.mobile) assert.equal(measures.illustrationDisplayed, false)
 
-    if (size.name === 'desktop') {
-      await page.keyboard.press('Tab')
-      assert.equal(await page.evaluate(() => document.activeElement?.className), 'skip-link')
-    }
-
     await page.screenshot({
       path: 'design-qa-artifacts/' + size.name + '.png',
       fullPage: true,
@@ -88,6 +83,18 @@ try {
     if (size.name === 'desktop' || size.name === 'mobile') {
       const thumbnail = await page.screenshot({ type: 'jpeg', quality: 38 })
       console.log('BUTTONPOST_QA_' + size.name.toUpperCase() + '=' + thumbnail.toString('base64'))
+      const full = await page.screenshot({ type: 'jpeg', quality: 25, fullPage: true })
+      console.log('BUTTONPOST_QA_' + size.name.toUpperCase() + '_FULL=' + full.toString('base64'))
+    }
+    if (size.name === 'desktop') {
+      await page.keyboard.press('Tab')
+      assert.equal(await page.evaluate(() => document.activeElement?.className), 'skip-link')
+      await page.locator('#title').fill('ButtonPost design smoke test')
+      await page.locator('#content').fill('One original post for all destinations.')
+      const image = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9X4mNwAAAABJRU5ErkJggg==', 'base64')
+      await page.locator('#images').setInputFiles([{ name: 'smoke.png', mimeType: 'image/png', buffer: image }])
+      assert.equal(await page.getByText('1 image selected', { exact: false }).count(), 1)
+      assert.equal(await page.getByRole('button', { name: /publish to 0 destinations/i }).isDisabled(), true)
     }
 
     // The link in the destination chooser must reveal the optional setup.
