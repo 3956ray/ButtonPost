@@ -1,3 +1,4 @@
+import { createCipheriv, createHash, randomBytes } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
@@ -123,14 +124,35 @@ function isJunkDiscount(discount: Discount) {
   return /\b(test|junk|dummy|sandbox|example|demo)\b/.test(text)
 }
 
+function seal(value: unknown, secret: string) {
+  const key = createHash('sha256').update(secret).digest()
+  const iv = randomBytes(12)
+  const cipher = createCipheriv('aes-256-gcm', key, iv)
+  const plaintext = Buffer.from(JSON.stringify(value), 'utf8')
+  const ciphertext = Buffer.concat([
+    cipher.update(plaintext),
+    cipher.final(),
+  ])
+  const tag = cipher.getAuthTag()
+
+  return [
+    iv.toString('base64url'),
+    tag.toString('base64url'),
+    ciphertext.toString('base64url'),
+  ].join('.')
+}
+
 export async function GET(request: NextRequest) {
   if (
-    request.nextUrl.searchParams.get('token') !==
-    process.env.PADDLE_MIGRATION_TOKEN
+    process.env.VERCEL_ENV !== 'preview' ||
+    process.env.VERCEL_GIT_COMMIT_REF !==
+      'phase-6g-paddle-live-staging' ||
+    request.nextUrl.hostname !== 'staging.buttonpost.app'
   ) {
     return NextResponse.json({ error: 'Not found.' }, { status: 404 })
   }
 
+  const migrationSecret = required('PADDLE_MIGRATION_TOKEN')
   const sandboxKey = required('PADDLE_API_KEY')
   const liveKey = required('PADDLE_LIVE_API_KEY')
   const sandboxBase = 'https://sandbox-api.paddle.com'
@@ -420,7 +442,7 @@ export async function GET(request: NextRequest) {
     ).data
   }
 
-  return NextResponse.json({
+  const result = {
     ok: true,
     liveProducts: productIds,
     sandboxToLivePriceIds: priceMap,
@@ -433,5 +455,10 @@ export async function GET(request: NextRequest) {
       endpointSecret: webhook.endpoint_secret_key || null,
       destination: webhook.destination,
     },
+  }
+
+  return NextResponse.json({
+    ok: true,
+    sealed: seal(result, migrationSecret),
   })
 }
