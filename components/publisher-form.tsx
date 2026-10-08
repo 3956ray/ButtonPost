@@ -949,8 +949,8 @@ export function PublisherForm({
             />
             <span className="platform-copy">
               <span className="platform-name">
-                <span className="platform-glyph glyph-xhs" aria-hidden="true">小</span>
-                小红书 <span className="platform-name-secondary">Xiaohongshu</span>
+                <span className="platform-glyph glyph-xhs" aria-hidden="true">XH</span>
+                Xiaohongshu <span className="platform-name-secondary">小红书</span>
               </span>
               <span className="platform-note">{localReady['xiaohongshu'] ? 'Local Runner · review before publish' : 'Needs optional Local Runner + login · see below'}</span>
             </span>
@@ -965,8 +965,8 @@ export function PublisherForm({
             />
             <span className="platform-copy">
               <span className="platform-name">
-                <span className="platform-glyph glyph-jike" aria-hidden="true">即</span>
-                即刻 <span className="platform-name-secondary">Jike</span>
+                <span className="platform-glyph glyph-jike" aria-hidden="true">JK</span>
+                Jike <span className="platform-name-secondary">即刻</span>
               </span>
               <span className="platform-note">{localReady['jike'] ? 'Local Runner · review before send' : 'Needs optional Local Runner + login · see below'}</span>
             </span>
@@ -981,8 +981,8 @@ export function PublisherForm({
             />
             <span className="platform-copy">
               <span className="platform-name">
-                <span className="platform-glyph glyph-lbc" aria-hidden="true">链</span>
-                登链社区 <span className="platform-name-secondary">LearnBlockchain</span>
+                <span className="platform-glyph glyph-lbc" aria-hidden="true">LB</span>
+                LearnBlockchain <span className="platform-name-secondary">登链社区</span>
               </span>
               <span className="platform-note">{localReady['learnblockchain'] ? 'Local Runner · article review before publish' : 'Needs optional Local Runner + login · see below'}</span>
             </span>
