@@ -1,14 +1,29 @@
 import { Environment, Paddle } from '@paddle/paddle-node-sdk'
+import type { PaddleBrowserEnvironment } from '@/lib/paddle/client'
+
+export function getPaddleEnvironment(): PaddleBrowserEnvironment {
+  const environment = process.env.PADDLE_ENV?.trim()
+
+  if (environment !== 'sandbox' && environment !== 'production') {
+    throw new Error(
+      'PADDLE_ENV must be explicitly set to sandbox or production.',
+    )
+  }
+
+  return environment
+}
 
 export function getPaddleServerConfig() {
   const apiKey = process.env.PADDLE_API_KEY?.trim()
-  const environment = process.env.PADDLE_ENV === 'production'
-    ? Environment.production
-    : Environment.sandbox
-
   if (!apiKey) return null
 
-  return { apiKey, environment }
+  const environmentName = getPaddleEnvironment()
+  const environment =
+    environmentName === 'production'
+      ? Environment.production
+      : Environment.sandbox
+
+  return { apiKey, environment, environmentName }
 }
 
 export function createPaddleServerClient() {

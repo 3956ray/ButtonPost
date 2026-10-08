@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { paidPlanForPriceId } from '@/lib/billing/tiers'
 import { createPaddleServerClient } from '@/lib/paddle/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -28,6 +29,20 @@ function cancelAtPeriodEnd(data: Record<string, unknown>) {
   return action === 'cancel'
 }
 
+function readPriceId(data: Record<string, unknown>) {
+  if (!Array.isArray(data.items)) return null
+
+  for (const item of data.items) {
+    if (!item || typeof item !== 'object') continue
+    const price = (item as { price?: unknown }).price
+    if (!price || typeof price !== 'object') continue
+    const id = (price as { id?: unknown }).id
+    if (typeof id === 'string' && id) return id
+  }
+
+  return null
+}
+
 async function syncSubscription(data: Record<string, unknown>) {
   const id = typeof data.id === 'string' ? data.id : null
   const customerId =
@@ -38,23 +53,27 @@ async function syncSubscription(data: Record<string, unknown>) {
 
   const admin = createAdminClient()
   let userId = readUserId(data.customData)
+  let existingPlan: string | null = null
+
+  const { data: existing, error: lookupError } = await admin
+    .from('subscriptions')
+    .select('user_id,plan')
+    .eq('paddle_subscription_id', id)
+    .maybeSingle()
+
+  if (lookupError) throw lookupError
 
   if (!userId) {
-    const { data: existing, error: lookupError } = await admin
-      .from('subscriptions')
-      .select('user_id')
-      .eq('paddle_subscription_id', id)
-      .maybeSingle()
-
-    if (lookupError) throw lookupError
     userId = existing?.user_id ?? null
   }
+  existingPlan = existing?.plan ?? null
 
   if (!userId) return
 
-  const plan = ['active', 'trialing', 'past_due'].includes(status)
-    ? 'pro'
-    : 'free'
+  const priceId = readPriceId(data)
+  const tier = priceId ? paidPlanForPriceId(priceId) : null
+  const active = ['active', 'trialing', 'past_due'].includes(status)
+  const plan = active ? tier ?? existingPlan ?? 'free' : 'free'
 
   const { error } = await admin.from('subscriptions').upsert(
     {

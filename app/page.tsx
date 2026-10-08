@@ -77,6 +77,9 @@ export default async function HomePage() {
               <span className="auth-chip">Personal MVP</span>
             ) : auth.userId ? (
               <form action="/auth/signout" method="post" className="auth-form">
+                <Link className="auth-link" href="/pricing">
+                  Pricing
+                </Link>
                 <Link className="auth-link" href="/settings/connections">
                   Connections
                 </Link>

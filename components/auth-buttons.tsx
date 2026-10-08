@@ -9,7 +9,11 @@ const providers: Array<{ id: Provider; label: string }> = [
   { id: 'github', label: 'Continue with GitHub' },
 ]
 
-export function AuthButtons() {
+type Props = {
+  nextPath?: string
+}
+
+export function AuthButtons({ nextPath = '/' }: Props) {
   const [busy, setBusy] = useState<Provider | null>(null)
   const [error, setError] = useState('')
 
@@ -20,7 +24,7 @@ export function AuthButtons() {
     try {
       const supabase = createClient()
       const redirectTo = new URL('/auth/callback', window.location.origin)
-      redirectTo.searchParams.set('next', '/')
+      redirectTo.searchParams.set('next', nextPath)
 
       const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider,
@@ -32,7 +36,11 @@ export function AuthButtons() {
         setBusy(null)
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not start sign-in.')
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : 'Could not start sign-in.',
+      )
       setBusy(null)
     }
   }

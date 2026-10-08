@@ -1,3 +1,4 @@
+import { getPaddleEnvironment } from '@/lib/paddle/server'
 import { createClient } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
@@ -13,7 +14,9 @@ type PaddlePortalResponse = {
 }
 
 function paddleApiBase() {
-  return process.env.PADDLE_ENV === 'production'
+  const environment = getPaddleEnvironment()
+
+  return environment === 'production'
     ? 'https://api.paddle.com'
     : 'https://sandbox-api.paddle.com'
 }
