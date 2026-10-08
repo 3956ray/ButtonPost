@@ -822,9 +822,28 @@ export function PublisherForm({
   }
   return (
     <>
+      <section className="workspace-section" aria-labelledby="workspace-title">
+        <div className="workspace-heading">
+          <div>
+            <span className="workspace-kicker">YOUR WORKSPACE <span>— 01 / 03</span></span>
+            <h2 id="workspace-title">The publishing desk<span className="brand-accent">.</span></h2>
+          </div>
+          <div className="workspace-heading-aside">
+            <span className="workspace-live-dot" aria-hidden="true" />
+            <span>Keep the voice.<br />Lose the extra clicks.</span>
+          </div>
+        </div>
       <form className="composer" onSubmit={onSubmit}>
       <section className="editor-pane">
-        <label className="label" htmlFor="title">Title</label>
+        <div className="pane-heading">
+          <span className="pane-step">01 <span>/</span> THE CONTENT</span>
+          <span className="pane-mode">SINGLE SOURCE</span>
+        </div>
+        <div className="editor-intro">
+          <h3>Start with your story.</h3>
+          <p>One original post. Every destination you choose.</p>
+        </div>
+        <label className="label" htmlFor="title">Title <span className="label-asterisk" aria-hidden="true">*</span></label>
         <input
           className="input"
           id="title"
@@ -835,22 +854,25 @@ export function PublisherForm({
           required
         />
 
-        <label className="label" htmlFor="content">Post</label>
+        <label className="label" htmlFor="content">Your post <span className="label-asterisk" aria-hidden="true">*</span></label>
         <textarea
           className="textarea"
           id="content"
           value={content}
           onChange={(event) => setContent(event.target.value)}
-          placeholder="Write once here. Markdown is preserved for DEV and mechanically normalized for plain-text platforms."
+          placeholder="Write what you want to share. Keep your voice — we'll handle the mechanical formatting for each destination."
           required
         />
         <div className="editor-meta">
-          <span>Markdown source</span>
-          <span>{sourceLength} source characters</span>
+          <span>MARKDOWN FRIENDLY</span>
+          <span>{sourceLength.toLocaleString()} characters</span>
         </div>
 
         <div className="media-field">
-          <label className="label" htmlFor="images">Images</label>
+          <div className="media-field-heading">
+            <label className="label" htmlFor="images">Attach images</label>
+            <span>OPTIONAL · UP TO 9</span>
+          </div>
           <input
             key={imageInputKey}
             className="file-input"
@@ -861,7 +883,7 @@ export function PublisherForm({
             onChange={onImagesChange}
           />
           <p className="helper">
-            One source image set. X attaches up to 4 images, DEV stores them in the article, and Xiaohongshu/Jike/LearnBlockchain send local files directly to your Local Runner. Up to 9 source images are accepted.
+            Attach once. ButtonPost routes the originals to your selected platforms. X supports up to four images per post.
           </p>
           {mediaProgress ? <p className="media-progress">{mediaProgress}</p> : null}
           {images.length > 0 ? (
@@ -874,9 +896,14 @@ export function PublisherForm({
       </section>
 
       <aside className="side-pane">
-        <h2 className="section-title">Publish to</h2>
-        <p className="helper">Cloud platforms work entirely in your browser. Local browser platforms require an optional helper installed on your computer.</p>
+        <div className="pane-heading">
+          <span className="pane-step">02 <span>/</span> DESTINATIONS</span>
+          <span className="pane-mode">{selected.length} SELECTED</span>
+        </div>
+        <h2 className="section-title">Choose your platforms.</h2>
+        <p className="helper side-description">Pick where this post should go. You stay in control of the final send.</p>
         <div className="platform-list">
+          <div className="platform-group-heading"><span>Cloud publishing</span><span>NO INSTALL NEEDED</span></div>
           {platforms.map((platform) => {
             const connected =
               platform.configured &&
@@ -895,7 +922,7 @@ export function PublisherForm({
                 />
                 <span className="platform-copy">
                   <span className="platform-name">
-                    <span className={'dot ' + (connected ? '' : 'off')} />
+                    <span className={'platform-glyph ' + (platform.id === 'x' ? 'glyph-x' : 'glyph-dev')} aria-hidden="true">{platform.id === 'x' ? '𝕏' : 'D'}</span>
                     {platform.name}
                   </span>
                   <span className="platform-note">
@@ -912,6 +939,7 @@ export function PublisherForm({
             )
           })}
 
+          <div className="platform-group-heading platform-group-heading--local"><span>Local publishing</span><span>OPTIONAL HELPER</span></div>
           <label className={'platform ' + (localReady['xiaohongshu'] ? '' : 'disabled')}>
             <input
               type="checkbox"
@@ -921,8 +949,8 @@ export function PublisherForm({
             />
             <span className="platform-copy">
               <span className="platform-name">
-                <span className={'dot ' + (localReady['xiaohongshu'] ? 'local' : 'off')} />
-                Xiaohongshu · 小红书
+                <span className="platform-glyph glyph-xhs" aria-hidden="true">小</span>
+                小红书 <span className="platform-name-secondary">Xiaohongshu</span>
               </span>
               <span className="platform-note">{localReady['xiaohongshu'] ? 'Local Runner · review before publish' : 'Needs optional Local Runner + login · see below'}</span>
             </span>
@@ -937,8 +965,8 @@ export function PublisherForm({
             />
             <span className="platform-copy">
               <span className="platform-name">
-                <span className={'dot ' + (localReady['jike'] ? 'local' : 'off')} />
-                Jike · 即刻
+                <span className="platform-glyph glyph-jike" aria-hidden="true">即</span>
+                即刻 <span className="platform-name-secondary">Jike</span>
               </span>
               <span className="platform-note">{localReady['jike'] ? 'Local Runner · review before send' : 'Needs optional Local Runner + login · see below'}</span>
             </span>
@@ -953,8 +981,8 @@ export function PublisherForm({
             />
             <span className="platform-copy">
               <span className="platform-name">
-                <span className={'dot ' + (localReady['learnblockchain'] ? 'local' : 'off')} />
-                LearnBlockchain · 登链社区
+                <span className="platform-glyph glyph-lbc" aria-hidden="true">链</span>
+                登链社区 <span className="platform-name-secondary">LearnBlockchain</span>
               </span>
               <span className="platform-note">{localReady['learnblockchain'] ? 'Local Runner · article review before publish' : 'Needs optional Local Runner + login · see below'}</span>
             </span>
@@ -964,7 +992,7 @@ export function PublisherForm({
 
         {signedIn ? (
           <a className="connections-shortcut" href="/settings/connections">
-            Manage X / DEV connections →
+            Manage cloud connections <span aria-hidden="true">↗</span>
           </a>
         ) : null}
 
@@ -974,6 +1002,8 @@ export function PublisherForm({
           </p>
         ) : null}
 
+        <div className="publish-area">
+        <span className="publish-area-label">03 <span>/</span> SEND IT OUT</span>
         <button
           className="publish-button"
           type="submit"
@@ -984,8 +1014,17 @@ export function PublisherForm({
             !content.trim()
           }
         >
-          {submitting ? 'Publishing…' : 'Publish everywhere (' + selected.length + ')'}
+          <span>{submitting ? 'Publishing…' : 'Publish to ' + selected.length + (selected.length === 1 ? ' destination' : ' destinations')}</span>
+          <span className="publish-button-arrow" aria-hidden="true">↗</span>
         </button>
+        <p className="publish-footnote" role="status">
+          {submitting
+            ? 'Sending to your selected platforms. Keep this page open.'
+            : selected.length === 0
+              ? 'Connect and select a platform to begin.'
+              : 'Each platform reports its own result. No automatic reposts.'}
+        </p>
+        </div>
       </aside>
 
       {retryNotice ? <p className="selection-warning" role="status">{retryNotice}</p> : null}
@@ -993,12 +1032,21 @@ export function PublisherForm({
 
       {results.length > 0 ? (
         <section className="results" aria-live="polite">
-          <h2>Publication results</h2>
+          <div className="results-header">
+            <div>
+              <span className="pane-step">03 <span>/</span> DELIVERY REPORT</span>
+              <h2>Here’s where your post went.</h2>
+            </div>
+            <span className="results-count">{results.length} {results.length === 1 ? 'RESULT' : 'RESULTS'}</span>
+          </div>
           <div className="result-list">
             {results.map((result) => (
               <div className="result" key={result.platform}>
                 <strong>{platformLabel(result.platform)}</strong>
-                <span className={'status ' + result.status}>{result.status}</span>
+                <span className={'status ' + result.status}>
+                  <span className="result-status-dot" aria-hidden="true" />
+                  {result.status}
+                </span>
                 <span className="result-detail">
                   {result.externalUrl ? (
                     <a href={result.externalUrl} target="_blank" rel="noreferrer">
@@ -1030,6 +1078,7 @@ export function PublisherForm({
         </section>
       ) : null}
       </form>
+      </section>
 
       <PublicationHistory
         entries={history}
