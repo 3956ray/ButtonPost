@@ -144,6 +144,19 @@ export function filterHistoryByPlatform(
   return entries.filter((entry) => entry.selected.includes(platform))
 }
 
+// A failed status may follow a network timeout even if the remote service posted.
+// Only the user's explicit publish confirmation may submit these again.
+export function getFailedHistoryPlatforms(
+  entry: PublicationHistoryEntry,
+): HistoryPlatformId[] {
+  const failed = new Set(
+    entry.results
+      .filter((result) => result.status === 'failed')
+      .map((result) => result.platform),
+  )
+  return entry.selected.filter((platform) => failed.has(platform))
+}
+
 export function getHistoryPlatformResult(
   entry: PublicationHistoryEntry,
   platform: HistoryPlatformId,
