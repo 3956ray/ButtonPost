@@ -124,7 +124,7 @@ try {
     { name: 'small-mobile', width: 320, height: 740 },
   ]) {
     const member = await browser.newPage({ viewport: size })
-    await member.goto(url + '/__design-qa', { waitUntil: 'networkidle' })
+    await member.goto(url + '/design-qa-fixture', { waitUntil: 'networkidle' })
     await member.locator('.hero--workspace').waitFor()
 
     assert.equal(await member.locator('.distribution-art').count(), 0)
@@ -184,7 +184,7 @@ try {
     })
   })
 
-  await publisher.goto(url + '/__design-qa', { waitUntil: 'networkidle' })
+  await publisher.goto(url + '/design-qa-fixture', { waitUntil: 'networkidle' })
   await publisher.locator('#title').fill('A single original post')
   await publisher.locator('#content').fill('One thought, multiple platforms.')
   await publisher.getByRole('button', { name: /publish to 2 destinations/i }).click()
@@ -215,7 +215,7 @@ try {
   console.log('PASS realistic publish/retry: X published, DEV failed, explicit DEV-only retry, history retained')
 
   const disconnected = await browser.newPage({ viewport: { width: 390, height: 844 } })
-  await disconnected.goto(url + '/__design-qa?mode=disconnected', { waitUntil: 'networkidle' })
+  await disconnected.goto(url + '/design-qa-fixture?mode=disconnected', { waitUntil: 'networkidle' })
   assert.equal(await disconnected.getByRole('link', { name: /connect your first platform/i }).isVisible(), true)
   assert.equal(await disconnected.locator('.platform input[type=checkbox]:enabled').count(), 0)
   await disconnected.screenshot({ path: 'design-qa-artifacts/signed-in-disconnected.png', fullPage: true })
@@ -223,7 +223,7 @@ try {
   console.log('PASS signed-in disconnected onboarding at mobile width')
 
   const connections = await browser.newPage({ viewport: { width: 1280, height: 840 } })
-  await connections.goto(url + '/__design-qa/connections', { waitUntil: 'networkidle' })
+  await connections.goto(url + '/design-qa-fixture/connections', { waitUntil: 'networkidle' })
   assert.equal(await connections.locator('.connection-card').count(), 2)
   assert.equal(await connections.locator('.connection-state.connected').count(), 1)
   await connections.screenshot({ path: 'design-qa-artifacts/connections-connected.png', fullPage: true })
