@@ -31,9 +31,9 @@ jobs:
         run: npx patchright install chromium
       - name: Prepare isolated, CI-only authenticated UI fixtures
         run: |
-          mkdir -p app/__design-qa/connections
-          cp scripts/fixtures/design-qa-home.tsx app/__design-qa/page.tsx
-          cp scripts/fixtures/design-qa-connections.tsx app/__design-qa/connections/page.tsx
+          mkdir -p app/design-qa-fixture/connections
+          cp scripts/fixtures/design-qa-home.tsx app/design-qa-fixture/page.tsx
+          cp scripts/fixtures/design-qa-connections.tsx app/design-qa-fixture/connections/page.tsx
       - name: Build isolated design QA application
         run: npm run build
       - name: Responsive / onboarding browser smoke
