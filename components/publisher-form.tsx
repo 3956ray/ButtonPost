@@ -878,15 +878,26 @@ export function PublisherForm({
             <label className="label" htmlFor="images">Attach images</label>
             <span>OPTIONAL · UP TO 9</span>
           </div>
-          <input
-            key={imageInputKey}
-            className="file-input"
-            id="images"
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            multiple
-            onChange={onImagesChange}
-          />
+          <div className="file-picker">
+            <input
+              key={imageInputKey}
+              className="file-input-visually-hidden"
+              id="images"
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              multiple
+              onChange={onImagesChange}
+              aria-describedby="file-picker-status"
+            />
+            <label htmlFor="images" className="file-picker-button">Choose files</label>
+            <span id="file-picker-status" className="file-picker-status" role="status">
+              {images.length === 0
+                ? 'No files selected'
+                : images.length === 1
+                  ? '1 file selected'
+                  : images.length + ' files selected'}
+            </span>
+          </div>
           <p className="helper">
             Attach once. ButtonPost routes the originals to your selected platforms. X supports up to four images per post.
           </p>
