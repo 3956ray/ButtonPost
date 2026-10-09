@@ -56,7 +56,11 @@ export function AuthButtons({ nextPath = '/' }: Props) {
             disabled={busy !== null}
             onClick={() => signIn(provider.id)}
           >
-            {busy === provider.id ? 'Opening…' : provider.label}
+            <span className={'auth-provider-glyph ' + (provider.id === 'google' ? 'google' : 'github')} aria-hidden="true">
+              {provider.id === 'google' ? 'G' : 'GH'}
+            </span>
+            <span className="auth-provider-label">{busy === provider.id ? 'Opening…' : provider.label}</span>
+            <span className="auth-provider-arrow" aria-hidden="true">↗</span>
           </button>
         ))}
       </div>

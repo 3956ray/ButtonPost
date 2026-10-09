@@ -85,6 +85,28 @@ export function JikeRunnerCard({
     }
   }, [runnerConnected, runnerSupported, runnerVersion])
 
+  useEffect(() => {
+    if (!runnerConnected || !runnerSupported) return
+
+    const onReadiness = (event: Event) => {
+      const details = (event as CustomEvent<Record<string, boolean>>).detail
+      if (typeof details?.jike !== 'boolean') return
+      if (state === 'checking' || state === 'login') return
+
+      const authenticated = details.jike
+      setState(authenticated ? 'connected' : 'disconnected')
+      setMessage(
+        authenticated
+          ? 'Jike login verified on this computer.'
+          : 'Jike is not signed in. Connect the account below.',
+      )
+    }
+
+    window.addEventListener('buttonpost:local-readiness-update', onReadiness)
+    return () =>
+      window.removeEventListener('buttonpost:local-readiness-update', onReadiness)
+  }, [runnerConnected, runnerSupported, state])
+
   async function checkLogin() {
     if (!runnerConnected || !runnerUrl.trim() || !runnerToken.trim()) {
       setState('error')
@@ -212,7 +234,7 @@ export function JikeRunnerCard({
       <div className="local-platform-header">
         <div>
           <span className="eyebrow">Local platform</span>
-          <h3>Jike · 即刻</h3>
+          <h3>Jike</h3>
         </div>
         <span className={'local-platform-status ' + state}>{label}</span>
       </div>

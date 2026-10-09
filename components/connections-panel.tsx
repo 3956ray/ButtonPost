@@ -104,17 +104,20 @@ export function ConnectionsPanel({
 
       <section className="connection-card">
         <div className="connection-card-head">
-          <div>
-            <span className="eyebrow">API connection</span>
-            <h2>X</h2>
+          <div className="connection-platform-heading">
+            <span className="connection-platform-glyph connection-platform-glyph-x" aria-hidden="true">𝕏</span>
+            <div>
+              <span className="eyebrow">CLOUD CHANNEL / 01</span>
+              <h2>X</h2>
+            </div>
           </div>
           <span className={`connection-state ${x ? 'connected' : ''}`}>
             {x ? 'Connected' : 'Not connected'}
           </span>
         </div>
         <p>
-          OAuth authorization happens on X. ButtonPost stores only the resulting
-          user access token and secret, encrypted at rest.
+          Connect with your X account to publish straight from ButtonPost.
+          Authorization stays under your control; publishing credentials are encrypted.
         </p>
 
         {x ? (
@@ -140,17 +143,20 @@ export function ConnectionsPanel({
 
       <section className="connection-card">
         <div className="connection-card-head">
-          <div>
-            <span className="eyebrow">API connection</span>
-            <h2>DEV Community</h2>
+          <div className="connection-platform-heading">
+            <span className="connection-platform-glyph connection-platform-glyph-dev" aria-hidden="true">D</span>
+            <div>
+              <span className="eyebrow">CLOUD CHANNEL / 02</span>
+              <h2>DEV Community</h2>
+            </div>
           </div>
           <span className={`connection-state ${devto ? 'connected' : ''}`}>
             {devto ? 'Connected' : 'Not connected'}
           </span>
         </div>
         <p>
-          DEV currently authenticates publishing with a personal API key. The key
-          is verified server-side, then encrypted before storage.
+          Connect with your own DEV Community API key. We'll verify it securely
+          and encrypt it before storing it for your account.
         </p>
 
         {devto ? (
