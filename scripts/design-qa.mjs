@@ -48,6 +48,8 @@ try {
 
     await page.goto(url, { waitUntil: 'networkidle', timeout: 30_000 })
     await page.locator('#hero-title').waitFor()
+    assert.equal(await page.getByText('Choose files', { exact: true }).isVisible(), true)
+    assert.equal(await page.getByText('No files selected', { exact: true }).isVisible(), true)
     assert.match(await page.locator('#hero-title').innerText(), /Write once\.\s*Post everywhere\./)
     assert.equal(await page.getByRole('link', { name: /start posting/i }).isVisible(), true)
     assert.equal(await page.locator('#workspace-title').count(), 1)
@@ -95,6 +97,7 @@ try {
       const image = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9X4mNwAAAABJRU5ErkJggg==', 'base64')
       await page.locator('#images').setInputFiles([{ name: 'smoke.png', mimeType: 'image/png', buffer: image }])
       assert.equal(await page.getByText('1 image selected', { exact: false }).count(), 1)
+      assert.equal(await page.getByText('1 file selected', { exact: true }).isVisible(), true)
       assert.equal(await page.getByRole('button', { name: /post to 0 platforms/i }).isDisabled(), true)
     }
 
@@ -109,6 +112,24 @@ try {
 
     await page.close()
   }
+
+
+  // Chinese browser locale must not change the file picker control copy.
+  const zhBrowser = await browser.newPage({
+    locale: 'zh-CN',
+    viewport: { width: 390, height: 844 },
+  })
+  await zhBrowser.goto(url, { waitUntil: 'networkidle' })
+  assert.equal(await zhBrowser.getByText('Choose files', { exact: true }).isVisible(), true)
+  assert.equal(await zhBrowser.getByText('No files selected', { exact: true }).isVisible(), true)
+  await zhBrowser.locator('#images').setInputFiles([{
+    name: 'example.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9X4mNwAAAABJRU5ErkJggg==', 'base64'),
+  }])
+  assert.equal(await zhBrowser.getByText('1 file selected', { exact: true }).isVisible(), true)
+  await zhBrowser.close()
+  console.log('PASS Chinese browser locale: file picker UI is consistently English')
 
   const login = await browser.newPage({ viewport: { width: 1280, height: 850 } })
   await login.goto(url + '/login', { waitUntil: 'networkidle' })
