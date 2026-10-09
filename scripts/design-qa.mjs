@@ -230,6 +230,89 @@ try {
   await connections.close()
   console.log('PASS actual connection cards: connected / disconnected')
 
+
+  // Failure/status layout must remain legible on a real narrow content column.
+  const mobileFailed = await browser.newPage({ viewport: { width: 390, height: 844 } })
+  await mobileFailed.route('**/api/publish', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        results: [
+          { platform: 'x', status: 'published', externalUrl: 'https://x.com/example/status/1' },
+          { platform: 'devto', status: 'failed', error: 'Temporary rate limit' },
+        ],
+      }),
+    })
+  })
+  await mobileFailed.goto(url + '/design-qa-fixture', { waitUntil: 'networkidle' })
+  await mobileFailed.locator('#title').fill('Mobile failure display')
+  await mobileFailed.locator('#content').fill('One original post with a partial delivery outcome.')
+  await mobileFailed.getByRole('button', { name: /publish to 2 destinations/i }).click()
+  await mobileFailed.getByText('Temporary rate limit').waitFor()
+  const mobileReport = await mobileFailed.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    viewport: window.innerWidth,
+  }))
+  assert.ok(mobileReport.scrollWidth <= 393, 'Mobile report overflow: ' + JSON.stringify(mobileReport))
+  await mobileFailed.screenshot({ path: 'design-qa-artifacts/delivery-partial-failure-mobile.png', fullPage: true })
+  await mobileFailed.close()
+  console.log('PASS mobile delivery report: partial success/failure, responsive status chips')
+
+  // Browser requests are intercepted entirely inside the test. No real runner,
+  // browser profile or third-party user account is accessed.
+  const paired = await browser.newPage({ viewport: { width: 1080, height: 850 } })
+  await paired.route('http://127.0.0.1:27123/**', async route => {
+    const req = route.request()
+    const pathname = new URL(req.url()).pathname
+    const headers = {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': url,
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+      'Access-Control-Allow-Private-Network': 'true',
+    }
+    if (req.method() === 'OPTIONS') {
+      await route.fulfill({ status: 204, headers })
+      return
+    }
+    const body = pathname === '/health'
+      ? {
+          ok: true,
+          name: 'ButtonPost Local Runner',
+          version: 'design-test',
+          capabilities: [
+            'xiaohongshu:auth',
+            'jike:auth',
+            'learnblockchain:auth',
+          ],
+        }
+      : pathname === '/v1/echo'
+        ? { ok: true, runner: 'design-test' }
+        : pathname.endsWith('/status')
+          ? { ok: true, authenticated: true, status: 'connected', message: 'Test account is connected' }
+          : { ok: false, error: 'Unexpected request in isolated design test' }
+    await route.fulfill({
+      status: body.ok ? 200 : 404,
+      headers,
+      body: JSON.stringify(body),
+    })
+  })
+  await paired.addInitScript(() => {
+    localStorage.setItem('buttonpost.runner.url', 'http://127.0.0.1:27123')
+    localStorage.setItem('buttonpost.runner.token', 'design-qa-test-secret-not-real')
+  })
+  await paired.goto(url + '/design-qa-fixture', { waitUntil: 'domcontentloaded' })
+  await paired.locator('.runner-state.connected').waitFor({ timeout: 12000 })
+  await paired.waitForFunction(() =>
+    [...document.querySelectorAll('.platform input[type=checkbox]')].slice(2).every(el => !el.disabled),
+  )
+  assert.equal(await paired.locator('.platform input[type=checkbox]:enabled').count(), 5)
+  await paired.getByRole('button', { name: /enable local publishing/i }).click()
+  await paired.screenshot({ path: 'design-qa-artifacts/runner-connected.png', fullPage: true })
+  await paired.close()
+  console.log('PASS simulated local pairing: cloud + 3 local destinations selectable after verified session')
+
   console.log('PASS design QA: guest + signed-in, four widths, publishing feedback and failed-only retry')
 } finally {
   await browser?.close().catch(() => {})

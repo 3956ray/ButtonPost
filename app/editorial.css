@@ -719,3 +719,13 @@ button:active:not(:disabled) { transform: translateY(0); }
 .distribution-channel b { font-size: 10px; letter-spacing: -.025em; }
 .platform-glyph.glyph-xhs, .platform-glyph.glyph-jike, .platform-glyph.glyph-lbc { font-size: 11px; letter-spacing: -.025em; }
 .auth-side-destinations span { font-size: 12px; letter-spacing: -.03em; }
+
+/* In History, retry is primary only when needed; Reuse is intentionally secondary. */
+.history-item-actions .history-reuse:last-child {
+  background: #e9ece4;
+  color: var(--text);
+}
+.history-item-actions .history-reuse:last-child:hover {
+  background: #dde5d9;
+  color: var(--text);
+}
