@@ -76,9 +76,9 @@ export default async function ConnectionsPage({ searchParams }: Props) {
         <div>
           <span className="eyebrow">NEXT / YOUR FIRST POST</span>
           <strong>Ready to share something?</strong>
-          <p>Return to the publishing desk whenever you’re ready.</p>
+          <p>Return to your Post Desk whenever you’re ready.</p>
         </div>
-        <Link href="/" className="settings-finish-link">Go to publishing desk <span aria-hidden="true">↗</span></Link>
+        <Link href="/" className="settings-finish-link">Go to your Post Desk <span aria-hidden="true">↗</span></Link>
       </div>
     </main>
   )

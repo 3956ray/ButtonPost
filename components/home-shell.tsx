@@ -54,7 +54,7 @@ export function HomeShell({ auth, platforms }: Props) {
   const signedIn = Boolean(auth.userId)
   return (
     <main className={'shell ' + (signedIn ? 'shell--signed-in' : 'shell--visitor')}>
-      <a className="skip-link" href="#workspace-title">Skip to publishing editor</a>
+      <a className="skip-link" href="#workspace-title">Skip to post editor</a>
       <header className="site-header">
         <div className="brand-lockup">
           <Link className="brand-home" href="/" aria-label="ButtonPost home">
@@ -100,7 +100,7 @@ export function HomeShell({ auth, platforms }: Props) {
           <div className="hero-kicker"><span className="hero-kicker-line" /> THE THOUGHTFUL WAY TO SHARE</div>
           <h1 id="hero-title">
             <span>Write once.</span>
-            <span>Publish <em>everywhere.</em></span>
+            <span>Post <em>everywhere.</em></span>
           </h1>
           <p>
             Your ideas deserve more than copy and paste. Write one original post,
@@ -109,7 +109,7 @@ export function HomeShell({ auth, platforms }: Props) {
           {!signedIn && auth.configured ? (
             <div className="hero-onboarding">
               <Link className="hero-onboarding-primary" href="/login?next=/">
-                Start publishing <span aria-hidden="true">↗</span>
+                Start posting <span aria-hidden="true">↗</span>
               </Link>
               <span>No installation needed for X and DEV.</span>
             </div>

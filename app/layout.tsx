@@ -4,7 +4,7 @@ import './editorial.css'
 
 export const metadata: Metadata = {
   title: 'ButtonPost',
-  description: 'Write once. Publish everywhere.',
+  description: 'Write once. Post everywhere.',
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

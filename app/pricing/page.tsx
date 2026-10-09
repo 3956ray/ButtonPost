@@ -67,7 +67,7 @@ export default async function PricingPage() {
         </div>
 
         <span className="eyebrow">Pricing</span>
-        <h1>Choose the plan that fits your publishing rhythm.</h1>
+        <h1>Choose a plan for how often you post.</h1>
         <p>
           Localized totals come directly from Paddle. Switch billing periods
           without client-side currency math or reformatting.

@@ -116,7 +116,7 @@ export function ConnectionsPanel({
           </span>
         </div>
         <p>
-          Connect with your X account to publish straight from ButtonPost.
+          Connect with your X account to post straight from ButtonPost.
           Authorization stays under your control; publishing credentials are encrypted.
         </p>
 

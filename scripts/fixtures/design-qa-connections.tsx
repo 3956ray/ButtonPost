@@ -26,10 +26,10 @@ export default function ConnectionsFixture() {
         <div>
           <span className="eyebrow">NEXT / YOUR FIRST POST</span>
           <strong>Ready to share something?</strong>
-          <p>Return to the publishing desk whenever you’re ready.</p>
+          <p>Return to your Post Desk whenever you’re ready.</p>
         </div>
         <Link href="/design-qa-fixture" className="settings-finish-link">
-          Go to publishing desk <span aria-hidden="true">↗</span>
+          Go to your Post Desk <span aria-hidden="true">↗</span>
         </Link>
       </div>
     </main>

@@ -2,7 +2,7 @@
 
 ## Design principle
 
-**Write once. Publish everywhere.** Focus the product around authorship, not integration complexity. Visitors understand the product quickly; returning users see a compact writing desk. This redesign changes presentation and UX, not the publishing engine.
+**Write once. Post everywhere.** Focus the product around authorship, not integration complexity. Visitors understand the product quickly; returning users see a compact writing desk. This redesign changes presentation and UX, not the publishing engine.
 
 ## Palette and hierarchy
 
@@ -31,7 +31,7 @@ System sans-serif typography is paired with a restrained italic serif hero. The 
 | --- | --- | --- |
 | Typography | Responsive scale, editorial voice, clear label hierarchy | Preview screenshots at four widths |
 | Whitespace | Wide visitor hero, compact signed-in hero, generous form rhythm | Browser geometry checks |
-| Hierarchy | Write → choose → publish, secondary Runner below | Manual flow audit |
+| Hierarchy | Write → choose → post, secondary Runner below | Manual flow audit |
 | Color | Restrained warm palette, single saturated CTA, semantic statuses | Source review and contrast spot-check |
 | Motion | Hover and subtle decorative signals | Reduced-motion CSS |
 | Microinteraction | Keyboard focus, selected platform ring, explicit retry, progressive disclosure | Browser smoke |

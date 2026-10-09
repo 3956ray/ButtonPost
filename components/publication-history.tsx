@@ -96,9 +96,9 @@ export function PublicationHistory({ entries, onReuse, onRetryFailed, onClear }:
       <div className="history-heading">
         <div>
           <span className="eyebrow">YOUR PRIVATE ACTIVITY</span>
-          <h2>Publication history</h2>
+          <h2>Post history</h2>
           <p>
-            See what was published, which platform needs attention, and reuse
+            See where each post went, which platform needs attention, and reuse
             a post without starting over. Filter your activity by destination.
           </p>
         </div>
@@ -110,14 +110,14 @@ export function PublicationHistory({ entries, onReuse, onRetryFailed, onClear }:
       </div>
 
       {entries.length > 0 ? (
-        <div className="history-filters" aria-label="Publication history platform">
+        <div className="history-filters" aria-label="Post history platform">
           <button
             type="button"
             className={'history-filter ' + (!activePlatform ? 'active' : '')}
             aria-pressed={!activePlatform}
             onClick={() => setActivePlatform(null)}
           >
-            <span>All publishes</span>
+            <span>All posts</span>
             <strong>{entries.length}</strong>
           </button>
 
@@ -144,19 +144,19 @@ export function PublicationHistory({ entries, onReuse, onRetryFailed, onClear }:
           <span className="eyebrow">Platform history</span>
           <strong>{platformLabel(activePlatform)}</strong>
           <span>
-            {visibleEntries.length} publish
-            {visibleEntries.length === 1 ? '' : 'es'}
+            {visibleEntries.length} post
+            {visibleEntries.length === 1 ? '' : 's'}
           </span>
         </div>
       ) : null}
 
       {entries.length === 0 ? (
         <div className="history-empty">
-          Nothing here yet. Your first delivery report will appear after you publish.
+          Nothing here yet. Your first post will appear here.
         </div>
       ) : visibleEntries.length === 0 ? (
         <div className="history-empty">
-          No publishing history exists for this platform yet.
+          No posts for this platform yet.
         </div>
       ) : (
         <div className="history-list">
@@ -203,7 +203,7 @@ export function PublicationHistory({ entries, onReuse, onRetryFailed, onClear }:
                       <button
                         type="button"
                         className="history-reuse"
-                        title="Prepares only failed platforms. Review and click Publish to retry."
+                        title="Prepares only failed platforms. Review and click Post to retry."
                         onClick={() => onRetryFailed(entry)}
                       >
                         Retry failed ({failedCount})
@@ -237,7 +237,7 @@ export function PublicationHistory({ entries, onReuse, onRetryFailed, onClear }:
                           aria-label={
                             'View ' +
                             platformLabel(platform) +
-                            ' publishing history'
+                            ' post history'
                           }
                           onClick={() => setActivePlatform(platform)}
                         >
@@ -267,7 +267,7 @@ export function PublicationHistory({ entries, onReuse, onRetryFailed, onClear }:
                   <div className="history-detail-panel">
                     <div className="history-detail-heading">
                       <span className="eyebrow">
-                        {activePlatform ? 'Platform result' : 'Publish results'}
+                        {activePlatform ? 'Platform result' : 'Post results'}
                       </span>
                       {!activePlatform ? (
                         <span>{entry.selected.length} destinations</span>
@@ -288,7 +288,7 @@ export function PublicationHistory({ entries, onReuse, onRetryFailed, onClear }:
                                 target="_blank"
                                 rel="noreferrer"
                               >
-                                Open published post ↗
+                                View post ↗
                               </a>
                             ) : (
                               result.error ??
@@ -309,7 +309,7 @@ export function PublicationHistory({ entries, onReuse, onRetryFailed, onClear }:
 
       <p className="history-privacy">
         Stored only in this browser for now. Secrets and runner credentials are never
-        written to publication history.
+        written to post history.
       </p>
     </section>
   )
