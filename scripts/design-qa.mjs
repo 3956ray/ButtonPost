@@ -309,6 +309,11 @@ try {
   )
   assert.equal(await paired.locator('.platform input[type=checkbox]:enabled').count(), 5)
   await paired.getByRole('button', { name: /enable local publishing/i }).click()
+  await paired.waitForFunction(
+    () => document.querySelectorAll('.local-platform-status.connected').length === 3,
+  )
+  assert.equal(await paired.locator('.local-platform-status.connected').count(), 3,
+    'Runner cards should reflect the same verified status as the chooser')
   await paired.screenshot({ path: 'design-qa-artifacts/runner-connected.png', fullPage: true })
   await paired.close()
   console.log('PASS simulated local pairing: cloud + 3 local destinations selectable after verified session')

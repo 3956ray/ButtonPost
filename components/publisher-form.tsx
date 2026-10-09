@@ -162,6 +162,11 @@ export function PublisherForm({
       }
       if (!cancelled && id === requestId) {
         setLocalReady(ready)
+        // Broadcast already-verified boolean readiness to the Runner UI.
+        // No tokens, cookies, or user account data are sent in this event.
+        window.dispatchEvent(
+          new CustomEvent('buttonpost:local-readiness-update', { detail: ready }),
+        )
         setSelected(current => current.filter(platform =>
           !ACTIVE_DESTINATION_SET.has(platform) || ready[platform]))
       }

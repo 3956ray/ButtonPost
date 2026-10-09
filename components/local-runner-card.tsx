@@ -384,7 +384,7 @@ export function LocalRunnerCard() {
         <div className="local-platform-header">
           <div>
             <span className="eyebrow">Local platform</span>
-            <h3>Xiaohongshu · 小红书</h3>
+            <h3>Xiaohongshu</h3>
           </div>
           <span className={'local-platform-status ' + xhsState}>{xhsLabel}</span>
         </div>
