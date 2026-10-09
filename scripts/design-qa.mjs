@@ -209,8 +209,8 @@ try {
   assert.deepEqual(attempts[1].platforms, ['devto'], 'Successful X post must not be duplicated')
   await publisher.screenshot({ path: 'design-qa-artifacts/retry-recovered.png', fullPage: true })
   await publisher.reload({ waitUntil: 'networkidle' })
-  assert.ok(await publisher.getByText('Publication history').isVisible())
-  assert.ok((await publisher.locator('.history-item').count()) >= 2)
+  assert.ok(await publisher.getByRole('heading', { name: 'Publication history' }).isVisible())
+  await publisher.locator('.history-item').nth(1).waitFor()
   await publisher.close()
   console.log('PASS realistic publish/retry: X published, DEV failed, explicit DEV-only retry, history retained')
 
