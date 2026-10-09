@@ -1,6 +1,6 @@
 # ButtonPost
 
-**Write once. Publish everywhere.**
+**Write once. Post everywhere.**
 
 ButtonPost is a personal-first, open-source multi-platform publishing tool. Write one source post, select destinations, press one button, and get an independent result for every platform.
 

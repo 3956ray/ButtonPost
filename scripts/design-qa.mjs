@@ -48,9 +48,10 @@ try {
 
     await page.goto(url, { waitUntil: 'networkidle', timeout: 30_000 })
     await page.locator('#hero-title').waitFor()
-    assert.equal(await page.getByRole('link', { name: /start publishing/i }).isVisible(), true)
+    assert.match(await page.locator('#hero-title').innerText(), /Write once\.\s*Post everywhere\./)
+    assert.equal(await page.getByRole('link', { name: /start posting/i }).isVisible(), true)
     assert.equal(await page.locator('#workspace-title').count(), 1)
-    assert.equal(await page.getByRole('button', { name: /publish to 0 destinations/i }).isDisabled(), true)
+    assert.equal(await page.getByRole('button', { name: /post to 0 platforms/i }).isDisabled(), true)
     assert.equal(await page.locator('.platform input[type="checkbox"]:checked').count(), 0)
 
     const measures = await page.evaluate(() => {
@@ -94,7 +95,7 @@ try {
       const image = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9X4mNwAAAABJRU5ErkJggg==', 'base64')
       await page.locator('#images').setInputFiles([{ name: 'smoke.png', mimeType: 'image/png', buffer: image }])
       assert.equal(await page.getByText('1 image selected', { exact: false }).count(), 1)
-      assert.equal(await page.getByRole('button', { name: /publish to 0 destinations/i }).isDisabled(), true)
+      assert.equal(await page.getByRole('button', { name: /post to 0 platforms/i }).isDisabled(), true)
     }
 
     // The link in the destination chooser must reveal the optional setup.
@@ -113,6 +114,7 @@ try {
   await login.goto(url + '/login', { waitUntil: 'networkidle' })
   assert.equal(await login.getByRole('button', { name: /continue with google/i }).count(), 1)
   assert.equal(await login.getByRole('button', { name: /continue with github/i }).count(), 1)
+  assert.equal(await login.getByText('Write once. Post everywhere.').isVisible(), true)
   await login.screenshot({ path: 'design-qa-artifacts/login.png', fullPage: true })
   await login.close()
 
@@ -130,7 +132,7 @@ try {
     assert.equal(await member.locator('.distribution-art').count(), 0)
     assert.equal(await member.locator('.platform input:checked').count(), 2)
     assert.equal(await member.locator('.platform input:disabled').count(), 3)
-    assert.equal(await member.getByRole('button', { name: /publish to 2 destinations/i }).isDisabled(), true)
+    assert.equal(await member.getByRole('button', { name: /post to 2 platforms/i }).isDisabled(), true)
 
     const metrics = await member.evaluate(() => ({
       documentWidth: document.documentElement.scrollWidth,
@@ -155,7 +157,7 @@ try {
       fullPage: true,
     })
 
-    await member.getByRole('button', { name: /enable local publishing/i }).click()
+    await member.getByRole('button', { name: /enable local posting/i }).click()
     assert.equal(await member.locator('#runner-details').isVisible(), true)
     await member.screenshot({
       path: 'design-qa-artifacts/runner-expanded-' + size.name + '.png',
@@ -187,7 +189,7 @@ try {
   await publisher.goto(url + '/design-qa-fixture', { waitUntil: 'networkidle' })
   await publisher.locator('#title').fill('A single original post')
   await publisher.locator('#content').fill('One thought, multiple platforms.')
-  await publisher.getByRole('button', { name: /publish to 2 destinations/i }).click()
+  await publisher.getByRole('button', { name: /post to 2 platforms/i }).click()
   await publisher.getByText('Temporary rate limit').waitFor()
   assert.equal(attempts.length, 1)
   assert.deepEqual(attempts[0].platforms, ['x', 'devto'])
@@ -203,13 +205,13 @@ try {
   assert.equal(attempts.length, 1, 'Selecting Retry must never send without explicit confirmation')
   await publisher.screenshot({ path: 'design-qa-artifacts/retry-only-failed.png', fullPage: true })
 
-  await publisher.getByRole('button', { name: /publish to 1 destination/i }).click()
-  await publisher.getByRole('link', { name: /open published post/i }).waitFor()
+  await publisher.getByRole('button', { name: /post to 1 platform/i }).click()
+  await publisher.getByRole('link', { name: /view post/i }).waitFor()
   assert.equal(attempts.length, 2)
   assert.deepEqual(attempts[1].platforms, ['devto'], 'Successful X post must not be duplicated')
   await publisher.screenshot({ path: 'design-qa-artifacts/retry-recovered.png', fullPage: true })
   await publisher.reload({ waitUntil: 'networkidle' })
-  assert.ok(await publisher.getByRole('heading', { name: 'Publication history' }).isVisible())
+  assert.ok(await publisher.getByRole('heading', { name: 'Post history' }).isVisible())
   await publisher.locator('.history-item').nth(1).waitFor()
   await publisher.close()
   console.log('PASS realistic publish/retry: X published, DEV failed, explicit DEV-only retry, history retained')
@@ -248,7 +250,7 @@ try {
   await mobileFailed.goto(url + '/design-qa-fixture', { waitUntil: 'networkidle' })
   await mobileFailed.locator('#title').fill('Mobile failure display')
   await mobileFailed.locator('#content').fill('One original post with a partial delivery outcome.')
-  await mobileFailed.getByRole('button', { name: /publish to 2 destinations/i }).click()
+  await mobileFailed.getByRole('button', { name: /post to 2 platforms/i }).click()
   await mobileFailed.getByText('Temporary rate limit').waitFor()
   const mobileReport = await mobileFailed.evaluate(() => ({
     scrollWidth: document.documentElement.scrollWidth,
@@ -308,7 +310,7 @@ try {
     [...document.querySelectorAll('.platform input[type=checkbox]')].slice(2).every(el => !el.disabled),
   )
   assert.equal(await paired.locator('.platform input[type=checkbox]:enabled').count(), 5)
-  await paired.getByRole('button', { name: /enable local publishing/i }).click()
+  await paired.getByRole('button', { name: /enable local posting/i }).click()
   await paired.waitForFunction(
     () => document.querySelectorAll('.local-platform-status.connected').length === 3,
   )

@@ -831,7 +831,7 @@ export function PublisherForm({
         <div className="workspace-heading">
           <div>
             <span className="workspace-kicker">YOUR WORKSPACE <span>— 01 / 03</span></span>
-            <h2 id="workspace-title">The publishing desk<span className="brand-accent">.</span></h2>
+            <h2 id="workspace-title">The Post Desk<span className="brand-accent">.</span></h2>
           </div>
           <div className="workspace-heading-aside">
             <span className="workspace-live-dot" aria-hidden="true" />
@@ -908,7 +908,7 @@ export function PublisherForm({
         <h2 className="section-title">Choose your platforms.</h2>
         <p className="helper side-description">Pick where this post should go. You stay in control of the final send.</p>
         <div className="platform-list">
-          <div className="platform-group-heading"><span>Cloud publishing</span><span>NO INSTALL NEEDED</span></div>
+          <div className="platform-group-heading"><span>Direct posting</span><span>NO INSTALL NEEDED</span></div>
           {platforms.map((platform) => {
             const connected =
               platform.configured &&
@@ -944,7 +944,7 @@ export function PublisherForm({
             )
           })}
 
-          <div className="platform-group-heading platform-group-heading--local"><span>Local publishing</span><span>OPTIONAL HELPER</span></div>
+          <div className="platform-group-heading platform-group-heading--local"><span>Local posting</span><span>OPTIONAL HELPER</span></div>
           <label className={'platform ' + (localReady['xiaohongshu'] ? '' : 'disabled')}>
             <input
               type="checkbox"
@@ -1008,7 +1008,7 @@ export function PublisherForm({
 
         {selected.includes('xiaohongshu') && images.length === 0 ? (
           <p className="selection-warning">
-            Xiaohongshu is selected but no image is attached. X / DEV can still publish; Xiaohongshu will report a separate failure.
+            Xiaohongshu is selected but no image is attached. X and DEV can still post; Xiaohongshu will report a separate failure.
           </p>
         ) : null}
 
@@ -1024,7 +1024,7 @@ export function PublisherForm({
             !content.trim()
           }
         >
-          <span>{submitting ? 'Publishing…' : 'Publish to ' + selected.length + (selected.length === 1 ? ' destination' : ' destinations')}</span>
+          <span>{submitting ? 'Posting…' : 'Post to ' + selected.length + (selected.length === 1 ? ' platform' : ' platforms')}</span>
           <span className="publish-button-arrow" aria-hidden="true">↗</span>
         </button>
         <p className="publish-footnote" role="status">
@@ -1060,7 +1060,7 @@ export function PublisherForm({
                 <span className="result-detail">
                   {result.externalUrl ? (
                     <a href={result.externalUrl} target="_blank" rel="noreferrer">
-                      Open published post ↗
+                      View post ↗
                     </a>
                   ) : (
                     result.error ?? result.externalId ?? 'No additional details.'
@@ -1082,7 +1082,7 @@ export function PublisherForm({
               >
                 Retry failed platforms ({results.filter((result) => result.status === 'failed').length})
               </button>
-              <span>Prepares only failed destinations. Review before publishing again.</span>
+              <span>Prepares only failed destinations. Review before posting again.</span>
             </div>
           )}
         </section>

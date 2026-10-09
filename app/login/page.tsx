@@ -41,10 +41,10 @@ export default async function LoginPage({ searchParams }: Props) {
     <main className="auth-shell">
       <section className="auth-card">
         <Link className="auth-home" href="/">← Back to ButtonPost</Link>
-        <div className="auth-topline"><span>YOUR PUBLISHING SPACE</span><span>01 / SIGN IN</span></div>
+        <div className="auth-topline"><span>POST FROM ONE PLACE</span><span>01 / SIGN IN</span></div>
         <h1>Less clicking.<br /><em>More sharing.</em></h1>
         <p>
-          Sign in to connect your accounts and publish your ideas from one thoughtfully simple workspace.
+          Sign in, connect your accounts, and post your ideas from one thoughtfully simple workspace.
         </p>
 
         {configured ? (
@@ -68,7 +68,7 @@ export default async function LoginPage({ searchParams }: Props) {
           <div className="auth-side-destinations"><span>𝕏</span><span>D</span><span>XH</span><span>JK</span><span>LB</span></div>
         </div>
         <strong>Good ideas are meant to travel.</strong>
-        <p>Write once. Publish everywhere.</p>
+        <p>Write once. Post everywhere.</p>
       </aside>
     </main>
   )

@@ -308,7 +308,7 @@ export function LocalRunnerCard() {
           <span className="eyebrow">EXPAND YOUR REACH / OPTIONAL</span>
           <h2>More platforms, when you need them.</h2>
           <p>
-            X and DEV need no installation. For Xiaohongshu, Jike, or LearnBlockchain, enable the optional on-device publishing helper.
+            X and DEV need no installation. For Xiaohongshu, Jike, or LearnBlockchain, enable the optional on-device posting helper.
           </p>
         </div>
         <span className={'runner-state ' + state}>
@@ -323,7 +323,7 @@ export function LocalRunnerCard() {
         aria-controls="runner-details"
         onClick={() => setExpanded(open => !open)}
       >
-        {expanded ? 'Hide setup' : 'Enable local publishing'}
+        {expanded ? 'Hide setup' : 'Enable local posting'}
         <span className="runner-toggle-arrow" aria-hidden="true">⌄</span>
       </button>
       </div>
