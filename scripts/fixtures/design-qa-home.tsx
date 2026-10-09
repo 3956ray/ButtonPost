@@ -1,4 +1,4 @@
-// CI-ONLY fixture copied into app/__design-qa/page.tsx before a QA build.
+// CI-ONLY fixture copied into app/design-qa-fixture/page.tsx before a QA build.
 // Never commit this route inside app/, and never point it at real credentials.
 import { HomeShell } from '@/components/home-shell'
 import type { PlatformId, PlatformMetadata } from '@/lib/publishers/types'
