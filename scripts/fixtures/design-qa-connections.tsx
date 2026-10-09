@@ -7,7 +7,7 @@ export default function ConnectionsFixture() {
     <main className="settings-shell">
       <header className="settings-header">
         <div>
-          <Link className="auth-home" href="/__design-qa">← ButtonPost</Link>
+          <Link className="auth-home" href="/design-qa-fixture">← ButtonPost</Link>
           <span className="eyebrow">YOUR WORKSPACE / STEP 02</span>
           <h1>Connect your channels<span className="brand-accent">.</span></h1>
           <p>Choose where your ideas travel. Connect X with one authorization or add your DEV Community API key.</p>
@@ -28,7 +28,7 @@ export default function ConnectionsFixture() {
           <strong>Ready to share something?</strong>
           <p>Return to the publishing desk whenever you’re ready.</p>
         </div>
-        <Link href="/__design-qa" className="settings-finish-link">
+        <Link href="/design-qa-fixture" className="settings-finish-link">
           Go to publishing desk <span aria-hidden="true">↗</span>
         </Link>
       </div>
