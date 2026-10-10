@@ -50,7 +50,7 @@ async function paddle<T>(
   return body as T
 }
 
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   if (
     process.env.VERCEL_ENV !== 'preview' ||
     process.env.VERCEL_GIT_COMMIT_REF !== 'phase-6i-live-launch' ||
