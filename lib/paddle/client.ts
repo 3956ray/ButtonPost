@@ -27,9 +27,9 @@ export async function createPaddleClient(
   if (environment === 'production') {
     return initializePaddle({
       token,
-      pwCustomer: paddleCustomerId
-        ? { id: paddleCustomerId }
-        : {},
+      ...(paddleCustomerId
+        ? { pwCustomer: { id: paddleCustomerId } }
+        : {}),
     })
   }
 
