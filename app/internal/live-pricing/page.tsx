@@ -49,21 +49,20 @@ export default async function LivePricingVerificationPage() {
       <header className="pricing-hero">
         <div className="pricing-nav">
           <Link className="auth-home" href="/">← ButtonPost</Link>
-          <span className="auth-chip">{user.email}</span>
+          <div className="settings-header-actions">
+            <span className="auth-chip">Paddle: LIVE</span>
+            <span className="auth-chip">{user.email}</span>
+          </div>
         </div>
 
-        <span className="eyebrow">Owner-only Live verification</span>
-        <h1>Paddle Live checkout verification.</h1>
+        <span className="eyebrow">Checkout diagnostics</span>
+        <h1>Paddle checkout.</h1>
         <p>
-          This page uses the real Paddle Live catalog on the approved
-          buttonpost.app domain. Open Checkout to verify prices and rendering,
-          but do not complete a real payment yet.
+          Owner-only view of the current production Paddle catalog on
+          buttonpost.app.
         </p>
       </header>
 
-      <p className="billing-banner error">
-        LIVE PADDLE · verification only · do not submit payment
-      </p>
 
       <PricingTable
         tiers={tiers}
